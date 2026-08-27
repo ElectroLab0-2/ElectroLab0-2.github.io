@@ -324,17 +324,83 @@
 </script>
 
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>ElectroLab v6.23 Universal Circuit Diagram Engine — Interactive Electrical & Electronics Virtual Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <style id="elab-dialog-core-style">
+    .elab-dialog-backdrop{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .elab-dialog-card{width:min(440px,calc(100vw - 32px));max-height:min(88vh,620px);overflow:auto;background:#0f172a;color:#e2e8f0;border:1px solid rgba(34,211,238,.24);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.55);padding:20px;font-family:inherit;animation:elabDialogIn .16s ease-out}
+    .elab-dialog-title{margin:0 0 7px;color:#67e8f9;font-size:17px;font-weight:800}
+    .elab-dialog-message{margin:0;color:#cbd5e1;font-size:13px;line-height:1.55;white-space:pre-wrap}
+    .elab-dialog-input{width:100%;box-sizing:border-box;margin-top:13px;padding:11px 12px;border-radius:10px;border:1px solid #334155;background:#020617;color:#e2e8f0;outline:none}
+    .elab-dialog-input:focus{border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.14)}
+    .elab-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+    .elab-dialog-actions button{min-width:92px;min-height:42px;padding:9px 14px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#cbd5e1;font-weight:800;font-size:12px;cursor:pointer}
+    .elab-dialog-actions button.primary{background:#0891b2;border-color:#22d3ee;color:#fff}
+    .elab-dialog-actions button.danger{background:#be123c;border-color:#fb7185;color:#fff}
+    .elab-dialog-actions button:focus-visible{outline:2px solid #67e8f9;outline-offset:2px}
+    @keyframes elabDialogIn{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.elab-dialog-card{animation:none}}
+    @media(max-width:480px){.elab-dialog-backdrop{padding:10px}.elab-dialog-card{width:100%;padding:17px;border-radius:16px}.elab-dialog-actions button{flex:1;min-width:0}}
+  </style>
+  <script id="elab-dialog-core">
+  (function(){
+    "use strict";
+    if(window.ElectroLabDialog) return;
+    function openDialog(opts){
+      opts=opts||{};
+      if(document.querySelector('.elab-dialog-backdrop')) return Promise.resolve(false);
+      var previous=document.activeElement;
+      var backdrop=document.createElement('div');
+      backdrop.className='elab-dialog-backdrop';
+      backdrop.setAttribute('role',opts.alertdialog?'alertdialog':'dialog');
+      backdrop.setAttribute('aria-modal','true');
+      var card=document.createElement('div'); card.className='elab-dialog-card';
+      var title=document.createElement('h2'); title.className='elab-dialog-title'; title.id='elab-dialog-title'; title.textContent=opts.title||'Confirm action';
+      var msg=document.createElement('p'); msg.className='elab-dialog-message'; msg.id='elab-dialog-message'; msg.textContent=opts.message||'';
+      backdrop.setAttribute('aria-labelledby',title.id); backdrop.setAttribute('aria-describedby',msg.id);
+      card.append(title,msg);
+      var input=null;
+      if(opts.input){ input=document.createElement('input'); input.className='elab-dialog-input'; input.type='text'; input.value=opts.value||''; input.placeholder=opts.placeholder||''; input.setAttribute('aria-label',opts.inputLabel||'Input'); card.append(input); }
+      var actions=document.createElement('div'); actions.className='elab-dialog-actions';
+      var cancel=document.createElement('button'); cancel.type='button'; cancel.textContent=opts.cancelText||'CANCEL';
+      var primary=document.createElement('button'); primary.type='button'; primary.textContent=opts.okText||'OK'; primary.className=opts.danger?'danger':'primary';
+      actions.append(cancel,primary); card.append(actions); backdrop.append(card);
+      document.body.appendChild(backdrop);
+      var done=false;
+      function close(result){ if(done)return; done=true; document.removeEventListener('keydown',onKey,true); backdrop.remove(); try{if(previous&&previous.focus)previous.focus();}catch(_){} resolve(result); }
+      function onKey(e){
+        if(e.key==='Escape'){e.preventDefault();close(opts.input?null:false);return;}
+        if(e.key==='Enter' && document.activeElement!==cancel){e.preventDefault();close(opts.input?(input?input.value:''):true);return;}
+        if(e.key!=='Tab')return;
+        var focusables=[cancel,primary]; if(input)focusables.unshift(input);
+        var first=focusables[0], last=focusables[focusables.length-1];
+        if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
+        else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+      }
+      var resolve; var promise=new Promise(function(r){resolve=r;});
+      cancel.addEventListener('click',function(){close(opts.input?null:false);});
+      primary.addEventListener('click',function(){close(opts.input?(input?input.value:''):true);});
+      backdrop.addEventListener('click',function(e){if(e.target===backdrop && opts.closeOnBackdrop)close(opts.input?null:false);});
+      document.addEventListener('keydown',onKey,true);
+      setTimeout(function(){try{(opts.input?input:cancel).focus();if(input)input.select();}catch(_){}},0);
+      return promise;
+    }
+    window.ElectroLabDialog=Object.freeze({
+      confirm:function(message,opts){opts=Object.assign({},opts,{message:message,okText:(opts&&opts.okText)||'REMOVE'});return openDialog(opts);},
+      alert:function(message,opts){opts=Object.assign({},opts,{message:message,okText:'OK'});return openDialog(opts).then(function(){return true;});},
+      prompt:function(message,value,opts){opts=Object.assign({},opts,{message:message,value:value||'',input:true,okText:(opts&&opts.okText)||'OK'});return openDialog(opts);}
+    });
+  })();
+  </script>
+  <title>NIL SparkLab v6.23 Universal Circuit Diagram Engine — Interactive Electrical & Electronics Virtual Lab</title>
   <meta name="google-site-verification" content="PVOgTsMzuCYEaf-a_v9rklQ1zx_tpFpwrV2t2lMfB8M" />
-  <meta name="description" content="ElectroLab is a free interactive virtual lab to learn electrical and electronics engineering — explore components, build circuits, simulate industrial motor starters, troubleshoot faults, and take quizzes." />
+  <meta name="description" content="NIL SparkLab is a free interactive virtual lab to learn electrical and electronics engineering — explore components, build circuits, simulate industrial motor starters, troubleshoot faults, and take quizzes." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%225%22%20fill%3D%22%230891b2%22/%3E%3Cpath%20d%3D%22M13%202%203%2014h7l-1%208%2010-12h-7l1-8z%22%20fill%3D%22%23020617%22/%3E%3C/svg%3E" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://electrolab0-2.github.io/" />
-  <meta property="og:title" content="ElectroLab — Interactive Electrical & Electronics Virtual Lab" />
+  <meta property="og:title" content="NIL SparkLab — Interactive Electrical & Electronics Virtual Lab" />
   <meta property="og:description" content="Free interactive lab to learn electrical & electronics: 50+ components, circuit builder, industrial motor starters, fault finder, and quizzes." />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="ElectroLab — Interactive Electrical & Electronics Virtual Lab" />
+  <meta name="twitter:title" content="NIL SparkLab — Interactive Electrical & Electronics Virtual Lab" />
   <meta name="twitter:description" content="Free interactive lab to learn electrical & electronics: 50+ components, circuit builder, industrial motor starters, fault finder, and quizzes." />
   <!-- PWA: manifest + theme color + iOS home-screen support -->
   <link rel="manifest" href="manifest.json" />
@@ -342,7 +408,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ElectroLab" />
+  <meta name="apple-mobile-web-app-title" content="NIL SparkLab" />
   <script>
     window.ElectroLabConfig = Object.freeze({ version: "6.21", projectFormat: "6.21" });
   </script>
@@ -2910,7 +2976,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         </div>
         <div>
           <span class="text-lg font-black tracking-tight text-white flex items-center gap-2">
-            ElectroLab <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded">v6.10</span>
+            NIL SparkLab <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded">v6.10</span>
           </span>
           <p class="text-[10px] text-slate-400 font-medium" data-i18n="tagline">Learn • Build • Simulate • Troubleshoot</p>
         </div>
@@ -4414,7 +4480,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         <div class="p-4 bg-amber-500/10 border-l-4 border-amber-500 rounded-r-lg mb-6 flex items-start gap-3">
           <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 shrink-0 mt-0.5"></i>
           <p class="text-xs text-slate-300 leading-relaxed" data-i18n="safeBanner">
-            <strong class="text-amber-300">Safety Rule:</strong> ElectroLab simulations are strictly educational and operate under extra-low voltage (&lt; 24V DC).
+            <strong class="text-amber-300">Safety Rule:</strong> NIL SparkLab simulations are strictly educational and operate under extra-low voltage (&lt; 24V DC).
           </p>
         </div>
       </div>
@@ -4645,7 +4711,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         quizTitle: "Interactive Lab Knowledge Test",
         safeHeading: "Laboratory Safety Standards",
         safeSub: "Operating protocols for low-voltage experiments vs. mains isolation",
-        safeBanner: "Safety Rule: ElectroLab simulations are strictly educational and operate under extra-low voltage (< 24V DC)."
+        safeBanner: "Safety Rule: NIL SparkLab simulations are strictly educational and operate under extra-low voltage (< 24V DC)."
       },
       hi: {
         tagline: "सीखें • बनाएं • सिमुलेट करें • गलती खोजें",
@@ -4707,7 +4773,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         quizTitle: "इंटरैक्टिव लैब ज्ञान परीक्षा",
         safeHeading: "प्रयोगशाला सुरक्षा मानक",
         safeSub: "कम वोल्टेज प्रयोग बनाम मेन्स आइसोलेशन सुरक्षा नियम",
-        safeBanner: "सुरक्षा नियम: ElectroLab के सभी सिमुलेशन केवल शैक्षणिक हैं और कम वोल्टेज (< 24V DC) पर काम करते हैं।"
+        safeBanner: "सुरक्षा नियम: NIL SparkLab के सभी सिमुलेशन केवल शैक्षणिक हैं और कम वोल्टेज (< 24V DC) पर काम करते हैं।"
       }
     };
 
@@ -5114,6 +5180,31 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         builderWires = Array.isArray(wires) ? wires : [];
         activeWireStart = null;
       },
+      setComponents: function(components){
+        builderCanvasComps = Array.isArray(components) ? components : [];
+      },
+      setWires: function(wires){
+        builderWires = Array.isArray(wires) ? wires : [];
+        activeWireStart = null;
+      },
+      addComponent: function(component){
+        if(component && typeof component === 'object') builderCanvasComps = builderCanvasComps.concat([component]);
+        return component || null;
+      },
+      addWires: function(wires){
+        if(Array.isArray(wires) && wires.length) builderWires = builderWires.concat(wires);
+        activeWireStart = null;
+        return builderWires;
+      },
+      removeWire: function(wireId){
+        builderWires = builderWires.filter(function(w){ return w && w.id !== wireId; });
+        activeWireStart = null;
+      },
+      removeComponent: function(id){
+        builderCanvasComps = builderCanvasComps.filter(function(c){ return c && c.id !== id; });
+        builderWires = builderWires.filter(function(w){ return w && w.from && w.to && w.from.compId !== id && w.to.compId !== id; });
+        activeWireStart = null;
+      },
       clear: function(){
         builderCanvasComps = [];
         builderWires = [];
@@ -5147,8 +5238,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       safeSound('click');
       redoStack.push(JSON.stringify({ components: builderCanvasComps, wires: builderWires, view: globalComponentView }));
       const prevState = JSON.parse(undoStack.pop());
-      builderCanvasComps = prevState.components || [];
-      builderWires = prevState.wires || [];
+      window.ElectroLabBuilderState.replace(prevState.components || [], prevState.wires || []);
       if (prevState.view === 'real' || prevState.view === 'symbol') globalComponentView = prevState.view;
       renderBuilderCanvas();
       const viewBtn = document.getElementById('elab-v577-view-toggle');
@@ -5163,8 +5253,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       safeSound('click');
       undoStack.push(JSON.stringify({ components: builderCanvasComps, wires: builderWires, view: globalComponentView }));
       const nextState = JSON.parse(redoStack.pop());
-      builderCanvasComps = nextState.components || [];
-      builderWires = nextState.wires || [];
+      window.ElectroLabBuilderState.replace(nextState.components || [], nextState.wires || []);
       if (nextState.view === 'real' || nextState.view === 'symbol') globalComponentView = nextState.view;
       renderBuilderCanvas();
       const viewBtn = document.getElementById('elab-v577-view-toggle');
@@ -5283,7 +5372,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         ...customProps
       };
 
-      builderCanvasComps.push(newComp);
+      window.ElectroLabBuilderState.addComponent(newComp);
       renderBuilderCanvas();
     }
 
@@ -5863,7 +5952,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       if (builderCanvasComps.length === 0) {
         if (emptyText) emptyText.classList.remove('hidden');
         document.querySelectorAll('.canvas-comp-card').forEach(e => e.remove());
-        builderWires = [];
+        window.ElectroLabBuilderState.setWires([]);
         drawWires();
         return;
       }
@@ -6042,7 +6131,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       const duplicate=builderWires.some(w=>(w.from.compId===activeWireStart.compId&&w.from.term===activeWireStart.term&&w.to.compId===compId&&w.to.term===term)||(w.to.compId===activeWireStart.compId&&w.to.term===activeWireStart.term&&w.from.compId===compId&&w.from.term===term));
       if(duplicate){document.getElementById('builder-status-text').innerText='⚠ This exact connection already exists.';cancelWireSelection();return;}
       if(builderWires.length >= 400){document.getElementById('builder-status-text').innerText='⚠ Security limit: maximum 400 wires per circuit.';cancelWireSelection();return;}
-      saveStateForUndo();builderWires.push({id:'w_'+Date.now()+Math.floor(Math.random()*1000),color:currentWireColor,from:activeWireStart,to:{compId,term}});activeWireStart=null;document.querySelectorAll('.el-integrated-terminal.wire-anchor').forEach(el=>el.classList.remove('wire-anchor'));renderBuilderCanvas();document.getElementById('builder-status-text').innerText=`✓ Wire connected: [${comp.name||compId}] ${term}. Tap wire to delete.`;runSmartDiagnostics();if(isSimRunning)runBuilderSim();
+      saveStateForUndo();window.ElectroLabBuilderState.addWires([{id:'w_'+Date.now()+Math.floor(Math.random()*1000),color:currentWireColor,from:activeWireStart,to:{compId,term}}]);activeWireStart=null;document.querySelectorAll('.el-integrated-terminal.wire-anchor').forEach(el=>el.classList.remove('wire-anchor'));renderBuilderCanvas();document.getElementById('builder-status-text').innerText=`✓ Wire connected: [${comp.name||compId}] ${term}. Tap wire to delete.`;runSmartDiagnostics();if(isSimRunning)runBuilderSim();
     }
 
     function cancelWireSelection() {
@@ -6058,7 +6147,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       }
       saveStateForUndo();
       safeSound('click');
-      builderWires = [];
+      window.ElectroLabBuilderState.setWires([]);
       cancelWireSelection();
       renderBuilderCanvas();
       document.getElementById('builder-status-text').innerText = 'All wires cleared. Components kept.';
@@ -6121,7 +6210,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       if (!exists) return;
       saveStateForUndo();
       safeSound('click');
-      builderWires = builderWires.filter(w => w.id !== wireId);
+      window.ElectroLabBuilderState.removeWire(wireId);
       cancelWireSelection();
       drawWires();
       const status = document.getElementById('builder-status-text');
@@ -6132,9 +6221,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
     function removeBuilderComp(id) {
       saveStateForUndo();
       safeSound('click');
-      builderCanvasComps = builderCanvasComps.filter(c => c.id !== id);
-      builderWires = builderWires.filter(w => w.from.compId !== id && w.to.compId !== id);
-      activeWireStart = null;
+      window.ElectroLabBuilderState.removeComponent(id);
       renderBuilderCanvas();
       if (isSimRunning) runBuilderSim();
     }
@@ -7259,11 +7346,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('resistor', { x: 190, y: 50, r: 470 });
         addBuilderComp('led', { x: 190, y: 220, vf: 2.0, color: 'Red' });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: '+ (Pos)' }, to: { compId: builderCanvasComps[1].id, term: 'T1' } },
             { id: 'w2', color: '#eab308', from: { compId: builderCanvasComps[1].id, term: 'T2' }, to: { compId: builderCanvasComps[2].id, term: 'Anode (+)' } },
             { id: 'w3', color: '#334155', from: { compId: builderCanvasComps[2].id, term: 'Cathode (-)' }, to: { compId: builderCanvasComps[0].id, term: '- (Gnd)' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 80);
@@ -7272,11 +7359,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('potentiometer', { x: 190, y: 50, r: 2500, wiperPos: 25 });
         addBuilderComp('led', { x: 190, y: 220, vf: 2.0, color: 'Red' });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: '+ (Pos)' }, to: { compId: builderCanvasComps[1].id, term: 'Pin 1' } },
             { id: 'w2', color: '#eab308', from: { compId: builderCanvasComps[1].id, term: 'Wiper' }, to: { compId: builderCanvasComps[2].id, term: 'Anode (+)' } },
             { id: 'w3', color: '#334155', from: { compId: builderCanvasComps[2].id, term: 'Cathode (-)' }, to: { compId: builderCanvasComps[0].id, term: '- (Gnd)' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 80);
@@ -7285,11 +7372,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('switch', { x: 190, y: 50, closed: true });
         addBuilderComp('motor', { x: 190, y: 220 });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: '+ (Pos)' }, to: { compId: builderCanvasComps[1].id, term: 'In' } },
             { id: 'w2', color: '#eab308', from: { compId: builderCanvasComps[1].id, term: 'Out' }, to: { compId: builderCanvasComps[2].id, term: 'M+' } },
             { id: 'w3', color: '#334155', from: { compId: builderCanvasComps[2].id, term: 'M-' }, to: { compId: builderCanvasComps[0].id, term: '- (Gnd)' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 80);
@@ -7299,11 +7386,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('diode', { x: 210, y: 100, vf: 0.7 });
         addBuilderComp('resistor', { x: 420, y: 100, r: 470 });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: 'L' }, to: { compId: builderCanvasComps[1].id, term: 'Anode (+)' } },
             { id: 'w2', color: '#22d3ee', from: { compId: builderCanvasComps[1].id, term: 'Cathode (-)' }, to: { compId: builderCanvasComps[2].id, term: 'T1' } },
             { id: 'w3', color: '#334155', from: { compId: builderCanvasComps[2].id, term: 'T2' }, to: { compId: builderCanvasComps[0].id, term: 'N' } }
-          );
+          ]);
           drawWires();
           renderBuilderCanvas();
         }, 100);
@@ -7313,13 +7400,13 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('resistor', { x: 420, y: 60, r: 470 });
         addBuilderComp('led', { x: 420, y: 210, vf: 2.0, color: 'Red' });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: 'L' }, to: { compId: builderCanvasComps[1].id, term: 'AC1' } },
             { id: 'w2', color: '#22d3ee', from: { compId: builderCanvasComps[1].id, term: 'DC+' }, to: { compId: builderCanvasComps[2].id, term: 'T1' } },
             { id: 'w3', color: '#22d3ee', from: { compId: builderCanvasComps[2].id, term: 'T2' }, to: { compId: builderCanvasComps[3].id, term: 'Anode (+)' } },
             { id: 'w4', color: '#334155', from: { compId: builderCanvasComps[3].id, term: 'Cathode (-)' }, to: { compId: builderCanvasComps[1].id, term: 'DC-' } },
             { id: 'w5', color: '#334155', from: { compId: builderCanvasComps[1].id, term: 'AC2' }, to: { compId: builderCanvasComps[0].id, term: 'N' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 100);
@@ -7327,10 +7414,10 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('battery', { x: 30, y: 120, v: 9 });
         addBuilderComp('led', { x: 190, y: 120, vf: 2.0, color: 'Red' });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#ef4444', from: { compId: builderCanvasComps[0].id, term: '+ (Pos)' }, to: { compId: builderCanvasComps[1].id, term: 'Anode (+)' } },
             { id: 'w2', color: '#334155', from: { compId: builderCanvasComps[1].id, term: 'Cathode (-)' }, to: { compId: builderCanvasComps[0].id, term: '- (Gnd)' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 80);
@@ -7339,10 +7426,10 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         addBuilderComp('logic_in', { x: 30, y: 180, state: 1 });
         addBuilderComp('gate_and', { x: 190, y: 120, gateType: 'AND' });
         setTimeout(() => {
-          builderWires.push(
+          window.ElectroLabBuilderState.addWires([
             { id: 'w1', color: '#22d3ee', from: { compId: builderCanvasComps[0].id, term: 'OUT' }, to: { compId: builderCanvasComps[2].id, term: 'In A' } },
             { id: 'w2', color: '#22d3ee', from: { compId: builderCanvasComps[1].id, term: 'OUT' }, to: { compId: builderCanvasComps[2].id, term: 'In B' } }
-          );
+          ]);
           drawWires();
           runBuilderSim();
         }, 80);
@@ -7363,7 +7450,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       ctx.fillRect(0, 0, rect.width, rect.height);
       ctx.font = 'bold 12px monospace';
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText('ElectroLab v5.62 — Circuit Schematic', 14, 20);
+      ctx.fillText('NIL SparkLab v5.62 — Circuit Schematic', 14, 20);
 
       builderWires.forEach(w => {
         const p1 = getTerminalCenter(w.from.compId, w.from.term), p2 = getTerminalCenter(w.to.compId, w.to.term);
@@ -7404,20 +7491,28 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         try {
           const parsed = JSON.parse(e.target.result);
           if (parsed.components && parsed.wires) {
+            const validator = window.ElectroLabSecurity && window.ElectroLabSecurity.validateProject;
+            if (typeof validator !== 'function') throw new Error('Canonical project validator unavailable');
+            const checked = validator({
+              version: window.ElectroLabConfig?.projectFormat || '5.62',
+              name: 'Imported Circuit',
+              circuit: { components: parsed.components, wires: parsed.wires },
+              simulation: { status: 'normal', overcurrent: 'false', currentDirection: 'forward', homePolarity: 1, homeFlowMode: 'conventional' }
+            });
+            if (!checked || !checked.ok) throw new Error(checked && checked.error || 'Circuit validation failed');
             saveStateForUndo();
-            builderCanvasComps = parsed.components;
-            builderWires = parsed.wires;
+            window.ElectroLabBuilderState.replace(checked.value.circuit.components, checked.value.circuit.wires);
             renderBuilderCanvas();
             SoundEngine.playBeep(1400, 0.1);
             document.getElementById('builder-status-text').innerText = "Circuit JSON imported successfully.";
           } else {
-            alert("JSON file is missing 'components' or 'wires' data.");
+            ElectroLabDialog.alert("JSON file is missing components or wires data.", {title:"Circuit Import Failed", alertdialog:true});
           }
         } catch (err) {
-          alert("Invalid JSON Circuit file.");
+          ElectroLabDialog.alert("Invalid JSON Circuit file.", {title:"Circuit Import Failed", alertdialog:true});
         }
       };
-      reader.onerror = () => alert("Could not read the selected file.");
+      reader.onerror = () => ElectroLabDialog.alert("Could not read the selected file.", {title:"Circuit Import Failed", alertdialog:true});
       reader.readAsText(file);
       // FIX: reset the input so re-selecting the same filename fires 'change' again
       event.target.value = '';
@@ -7428,9 +7523,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       if (hadContent) saveStateForUndo();
       safeSound('click');
       isSimRunning = false;
-      builderCanvasComps = [];
-      builderWires = [];
-      activeWireStart = null;
+      window.ElectroLabBuilderState.clear();
       document.getElementById('builder-preset-select').value = "";
       document.getElementById('builder-status-text').innerText = "Canvas cleared.";
       document.getElementById('builder-calc-stat').innerText = "";
@@ -9891,6 +9984,64 @@ document.addEventListener('DOMContentLoaded', function(){
     if (component) window.ElectroLabV520.rotateComponent(component, 90);
   });
 
+  // Surgical Builder delete trigger: preserve existing delete function/modal and
+  // scope the gesture to real Builder cards (which use .canvas-comp-card).
+  document.addEventListener("dblclick", function (e) {
+    var card = e.target.closest("#builder-canvas .canvas-comp-card");
+    if (!card || e.target.closest("button, input, .terminal-btn")) return;
+    var id = card.id;
+    if (!id || typeof window.removeBuilderComp !== "function") return;
+    var nameEl = card.querySelector(".text-cyan-300");
+    var name = nameEl ? nameEl.textContent.trim().split(" · ")[0] : id;
+    if (!window.ElectroLabDialog || typeof window.ElectroLabDialog.confirm !== "function") return;
+    window.ElectroLabDialog.confirm(
+      "Remove \"" + name + "\" from the circuit?",
+      { title: "Delete Component?", okText: "REMOVE", cancelText: "CANCEL", danger: true }
+    ).then(function (ok) {
+      if (ok) window.removeBuilderComp(id);
+    });
+  });
+
+  // Touch fallback: two deliberate taps on the same Builder card. Movement,
+  // terminals and controls are ignored so dragging/wiring remain unchanged.
+  var lastBuilderTap = null;
+  var builderTouchStart = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "touch") return;
+    var card = e.target.closest("#builder-canvas .canvas-comp-card");
+    if (!card || e.target.closest("button, input, .terminal-btn")) { builderTouchStart = null; lastBuilderTap = null; return; }
+    builderTouchStart = { card: card, x: e.clientX, y: e.clientY };
+  }, { passive: true });
+  document.addEventListener("pointerup", function (e) {
+    if (e.pointerType !== "touch") return;
+    var card = e.target.closest("#builder-canvas .canvas-comp-card");
+    var start = builderTouchStart;
+    builderTouchStart = null;
+    if (!card || !start || start.card !== card || e.target.closest("button, input, .terminal-btn")) { lastBuilderTap = null; return; }
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 12) { lastBuilderTap = null; return; }
+    var now = Date.now();
+    if (lastBuilderTap && lastBuilderTap.card === card && now - lastBuilderTap.time <= 420 &&
+        Math.hypot(e.clientX - lastBuilderTap.x, e.clientY - lastBuilderTap.y) <= 24) {
+      lastBuilderTap = null;
+      var id = card.id;
+      if (!id || typeof window.removeBuilderComp !== "function" ||
+          !window.ElectroLabDialog || typeof window.ElectroLabDialog.confirm !== "function") return;
+      var nameEl = card.querySelector(".text-cyan-300");
+      var name = nameEl ? nameEl.textContent.trim().split(" · ")[0] : id;
+      window.ElectroLabDialog.confirm(
+        "Remove \"" + name + "\" from the circuit?",
+        { title: "Delete Component?", okText: "REMOVE", cancelText: "CANCEL", danger: true }
+      ).then(function (ok) {
+        if (ok) window.removeBuilderComp(id);
+      });
+      return;
+    }
+    lastBuilderTap = { card: card, time: now, x: e.clientX, y: e.clientY };
+    setTimeout(function () {
+      if (lastBuilderTap && lastBuilderTap.card === card && Date.now() - lastBuilderTap.time > 450) lastBuilderTap = null;
+    }, 460);
+  }, { passive: true });
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-component]").forEach(function (el) {
       if (!el.dataset.rotation) el.dataset.rotation = "0";
@@ -9900,238 +10051,25 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 
 
-<script>
-/* ElectroLab v5.62 FINAL — builder history, duplication, deletion,
-   connection cleanup, selection highlighting and circuit diagnostics */
-(function () {
+<script id="elab-v562-history-compat">
+/* v5.62 compatibility facade: canonical Builder-state history owns Undo/Redo. */
+(function(){
   "use strict";
-
-  var MAX_HISTORY = 60;
-  var history = [], cursor = -1;
-  var suppress = false;
-
-  function snapshot() {
-    var root = document.querySelector("[data-circuit-canvas]") ||
-               document.querySelector("#circuit-builder") ||
-               document.querySelector("main") || document.body;
-    return root ? root.innerHTML : "";
+  function selectedComponent(){
+    return document.querySelector("[data-component].is-selected") || document.querySelector("[data-component][aria-selected='true']");
   }
-
-  function commit() {
-    if (suppress) return;
-    var s = snapshot();
-    if (!s) return;
-    if (cursor >= 0 && history[cursor] === s) return;
-    history = history.slice(0, cursor + 1);
-    history.push(s);
-    if (history.length > MAX_HISTORY) history.shift();
-    cursor = history.length - 1;
-    updateHistoryUI();
+  function diagnose(){
+    if(typeof window.runSmartDiagnostics === "function") return window.runSmartDiagnostics();
+    return null;
   }
-
-  function restore(s) {
-    var root = document.querySelector("[data-circuit-canvas]") ||
-               document.querySelector("#circuit-builder") ||
-               document.querySelector("main");
-    if (!root || !s) return;
-    suppress = true;
-    root.innerHTML = s;
-    suppress = false;
-    bind();
-    window.dispatchEvent(new CustomEvent("electrolab:circuit-restored"));
-  }
-
-  function undo() {
-    if (cursor <= 0) return;
-    cursor--;
-    restore(history[cursor]);
-    updateHistoryUI();
-  }
-
-  function redo() {
-    if (cursor >= history.length - 1) return;
-    cursor++;
-    restore(history[cursor]);
-    updateHistoryUI();
-  }
-
-  function updateHistoryUI() {
-    document.querySelectorAll("[data-history-undo]").forEach(function (b) {
-      b.disabled = cursor <= 0;
-    });
-    document.querySelectorAll("[data-history-redo]").forEach(function (b) {
-      b.disabled = cursor >= history.length - 1;
-    });
-  }
-
-  function selectedComponent() {
-    return document.querySelector("[data-component].is-selected") ||
-           document.querySelector("[data-component][aria-selected='true']");
-  }
-
-  function duplicate(el) {
-    if (!el || !el.parentNode) return;
-    var copy = el.cloneNode(true);
-    copy.classList.remove("is-selected");
-    copy.setAttribute("aria-selected", "false");
-    copy.dataset.duplicate = "true";
-    el.parentNode.insertBefore(copy, el.nextSibling);
-    bind();
-    commit();
-    copy.dispatchEvent(new CustomEvent("electrolab:component-duplicated", {
-      bubbles: true, detail: { source: el, copy: copy }
-    }));
-  }
-
-  function removeComponent(el) {
-    if (!el) return;
-    var id = el.dataset.componentId || el.id;
-    var root = el.closest("[data-circuit-canvas]") ||
-               el.closest("#circuit-builder") || document;
-    if (id) {
-      root.querySelectorAll(
-        "[data-wire][data-from-component='" + CSS.escape(id) + "']," +
-        "[data-wire][data-to-component='" + CSS.escape(id) + "']"
-      ).forEach(function (wire) { wire.remove(); });
-    }
-    el.remove();
-    commit();
-    window.dispatchEvent(new CustomEvent("electrolab:component-deleted", {
-      detail: { componentId: id || null }
-    }));
-  }
-
-  function selectComponent(el) {
-    document.querySelectorAll("[data-component].is-selected").forEach(function (x) {
-      x.classList.remove("is-selected");
-      x.setAttribute("aria-selected", "false");
-    });
-    if (el) {
-      el.classList.add("is-selected");
-      el.setAttribute("aria-selected", "true");
-    }
-    highlightConnections(el);
-  }
-
-  function highlightConnections(el) {
-    document.querySelectorAll("[data-wire]").forEach(function (w) {
-      w.classList.remove("connection-highlight");
-    });
-    if (!el) return;
-    var id = el.dataset.componentId || el.id;
-    if (!id) return;
-    document.querySelectorAll("[data-wire]").forEach(function (w) {
-      if (w.dataset.fromComponent === id || w.dataset.toComponent === id) {
-        w.classList.add("connection-highlight");
-      }
-    });
-  }
-
-  function diagnose() {
-    var components = document.querySelectorAll("[data-component]");
-    var wires = document.querySelectorAll("[data-wire]");
-    var terminals = document.querySelectorAll("[data-terminal]");
-    var connected = new Set();
-
-    wires.forEach(function (w) {
-      if (w.dataset.fromTerminal) connected.add(w.dataset.fromTerminal);
-      if (w.dataset.toTerminal) connected.add(w.dataset.toTerminal);
-    });
-
-    var unconnected = 0;
-    terminals.forEach(function (t) {
-      if (t.dataset.required !== "false" &&
-          t.dataset.terminal &&
-          !connected.has(t.dataset.terminal)) unconnected++;
-    });
-
-    var status = "NORMAL";
-    if (!components.length) status = "NO COMPONENTS";
-    else if (wires.length === 0) status = "NO CONNECTIONS";
-    else if (unconnected > 0) status = "OPEN CIRCUIT";
-
-    document.documentElement.dataset.circuitStatus =
-      status.toLowerCase().replace(/\s+/g, "-");
-
-    document.querySelectorAll("[data-circuit-error-panel]").forEach(function (p) {
-      p.textContent = status;
-      p.dataset.status = status.toLowerCase().replace(/\s+/g, "-");
-    });
-
-    return { status: status, components: components.length,
-             wires: wires.length, unconnectedTerminals: unconnected };
-  }
-
-  function bind() {
-    document.querySelectorAll("[data-history-undo]").forEach(function (b) {
-      b.onclick = undo;
-    });
-    document.querySelectorAll("[data-history-redo]").forEach(function (b) {
-      b.onclick = redo;
-    });
-
-    document.querySelectorAll("[data-component]").forEach(function (el) {
-      el.addEventListener("click", function (e) {
-        if (!e.defaultPrevented) selectComponent(el);
-      });
-    });
-
-    document.querySelectorAll("[data-component-duplicate]").forEach(function (b) {
-      b.onclick = function () { duplicate(selectedComponent()); };
-    });
-
-    document.querySelectorAll("[data-component-delete]").forEach(function (b) {
-      b.onclick = function () { removeComponent(selectedComponent()); };
-    });
-
-    document.querySelectorAll("[data-circuit-diagnose]").forEach(function (b) {
-      b.onclick = diagnose;
-    });
-  }
-
-  var style = document.createElement("style");
-  style.textContent = `
-    [data-component].is-selected {
-      outline: 2px solid currentColor;
-      outline-offset: 4px;
-    }
-    [data-wire].connection-highlight {
-      filter: brightness(1.25);
-      stroke-width: 3 !important;
-    }
-    [data-circuit-error-panel][data-status="normal"] { opacity: .9; }
-    [data-circuit-error-panel][data-status="open-circuit"] { font-weight: 700; }
-  `;
-  document.head.appendChild(style);
-
-  window.ElectroLabV521 = {
-    undo: undo,
-    redo: redo,
-    duplicate: duplicate,
-    deleteSelected: function () { removeComponent(selectedComponent()); },
-    diagnose: diagnose,
-    commit: commit
+  window.ElectroLabV521={
+    undo:function(){ if(typeof window.undoAction==='function') window.undoAction(); },
+    redo:function(){ if(typeof window.redoAction==='function') window.redoAction(); },
+    duplicate:function(){ return null; },
+    deleteSelected:function(){ if(typeof window.removeBuilderComp==='function'){ var c=selectedComponent(); if(c) window.removeBuilderComp(c.dataset.componentId||c.id); } },
+    diagnose:diagnose,
+    commit:function(){ if(typeof window.saveStateForUndo==='function') window.saveStateForUndo(); }
   };
-
-  document.addEventListener("keydown", function (e) {
-    var mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key.toLowerCase() === "z") {
-      e.preventDefault(); e.shiftKey ? redo() : undo();
-    } else if (mod && e.key.toLowerCase() === "y") {
-      e.preventDefault(); redo();
-    } else if (mod && e.key.toLowerCase() === "d") {
-      e.preventDefault(); duplicate(selectedComponent());
-    } else if ((e.key === "Delete" || e.key === "Backspace") &&
-               !/input|textarea|select/i.test(document.activeElement.tagName)) {
-      removeComponent(selectedComponent());
-    }
-  });
-
-  document.addEventListener("DOMContentLoaded", function () {
-    bind();
-    commit();
-    diagnose();
-  });
 })();
 </script>
 
@@ -10212,10 +10150,28 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (!data) return false;
 
+    // Every project entering Builder state must pass the canonical validator first.
+    try {
+      var canonicalValidator = window.ElectroLabSecurity && window.ElectroLabSecurity.validateProject;
+      if (typeof canonicalValidator !== "function") {
+        console.warn("ElectroLab: canonical project validator unavailable; load refused.");
+        return false;
+      }
+      var validated = canonicalValidator(data);
+      if (!validated || !validated.ok) {
+        console.warn("ElectroLab: project rejected by canonical validator.", validated && validated.error);
+        return false;
+      }
+      data = validated.value;
+    } catch (e) {
+      console.warn("ElectroLab: canonical project validation failed.", e);
+      return false;
+    }
+
     // Migrate older ElectroLab project payloads into the current unified format.
     if (!data.circuit) return false;
-    if (!Array.isArray(data.circuit.components)) data.circuit.components = [];
-    if (!Array.isArray(data.circuit.wires)) data.circuit.wires = [];
+    if (!Array.isArray(data.circuit.components) || !Array.isArray(data.circuit.wires)) return false;
+    data = JSON.parse(JSON.stringify(data));
     data.version = window.ElectroLabConfig?.projectFormat || "5.62";
 
     var r = root();
@@ -10223,12 +10179,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Restore the real circuit model first; HTML is only the visual shell.
     if (data.circuit && Array.isArray(data.circuit.components) && Array.isArray(data.circuit.wires)) {
-      window.builderCanvasComps = JSON.parse(JSON.stringify(data.circuit.components));
-      window.builderWires = JSON.parse(JSON.stringify(data.circuit.wires));
-      try {
-        builderCanvasComps = window.builderCanvasComps;
-        builderWires = window.builderWires;
-      } catch (_) {}
+      window.ElectroLabBuilderState.replace(
+        JSON.parse(JSON.stringify(data.circuit.components)),
+        JSON.parse(JSON.stringify(data.circuit.wires))
+      );
       if (typeof renderBuilderCanvas === "function") renderBuilderCanvas();
     } else {
       return false;
@@ -10274,8 +10228,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function newProject() {
     var r = root();
     if (!r) return;
-    try { builderCanvasComps = []; builderWires = []; } catch (_) {}
-    try { window.builderCanvasComps = builderCanvasComps; window.builderWires = builderWires; } catch (_) {}
+    try { window.ElectroLabBuilderState.clear(); } catch (_) { return; }
     if (typeof renderBuilderCanvas === "function") renderBuilderCanvas();
     else r.innerHTML = "";
     if (typeof updateHomeFlow === "function") updateHomeFlow();
@@ -10307,11 +10260,14 @@ document.addEventListener('DOMContentLoaded', function(){
     reader.onload = function () {
       try {
         var data = JSON.parse(reader.result);
-        if (!data || !data.circuit) throw new Error("Invalid project format");
-        load(data);
-        save(data.name);
+        var validator = window.ElectroLabSecurity && window.ElectroLabSecurity.validateProject;
+        if (typeof validator !== "function") throw new Error("Canonical project validator unavailable");
+        var checked = validator(data);
+        if (!checked || !checked.ok) throw new Error(checked && checked.error || "Invalid project format");
+        if (!load(checked.value)) throw new Error("Project load failed");
+        save(checked.value.name);
       } catch (e) {
-        alert("Invalid ElectroLab project file.");
+        ElectroLabDialog.alert("Invalid NIL SparkLab project file.", {title:"Import Failed", alertdialog:true});
       }
     };
     reader.readAsText(file);
@@ -10348,9 +10304,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if (newBtn) {
       e.preventDefault();
       if (document.documentElement.dataset.unsaved === "true") {
-        if (!confirm("You have unsaved changes. Start a new project?")) return;
-      }
-      newProject();
+        ElectroLabDialog.confirm("You have unsaved changes. Start a new project?", {title:"Start New Project?", okText:"START NEW", danger:true}).then(function(ok){ if(ok) newProject(); });
+      } else newProject();
     }
     if (exportBtn) {
       e.preventDefault();
@@ -10801,15 +10756,18 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!p){setStatus("Project not found.","warn");return;}
     var a=api();
     if(!a||typeof a.load!=="function"){setStatus("Project engine is not ready.","warn");return;}
-    if(document.documentElement.dataset.unsaved==="true" &&
-       !confirm("Current project has unsaved changes. Load this project anyway?"))return;
-    try{
-      a.load(p);
-      nameInput.value=p.name||"Untitled Circuit";
-      lastHash=hash(p);
-      setStatus("✓ Loaded: "+(p.name||"Untitled Circuit"),"ok");
-      render();
-    }catch(e){setStatus("Could not load project.","danger");}
+    function proceed(){
+      try{
+        a.load(p);
+        nameInput.value=p.name||"Untitled Circuit";
+        lastHash=hash(p);
+        setStatus("✓ Loaded: "+(p.name||"Untitled Circuit"),"ok");
+        render();
+      }catch(e){setStatus("Could not load project.","danger");}
+    }
+    if(document.documentElement.dataset.unsaved==="true")
+      ElectroLabDialog.confirm("Current project has unsaved changes. Load this project anyway?", {title:"Load Project?", okText:"LOAD", danger:true}).then(function(ok){if(ok)proceed();});
+    else proceed();
   }
   function duplicateProject(id){
     var p=read().find(function(x){return x.id===id;});
@@ -10824,19 +10782,22 @@ document.addEventListener('DOMContentLoaded', function(){
   function deleteProject(id){
     var p=read().find(function(x){return x.id===id;});
     if(!p)return;
-    if(!confirm('Delete "'+(p.name||"Untitled Circuit")+'"?'))return;
-    write(read().filter(function(x){return x.id!==id;}));
-    render();setStatus("Project deleted.","ok");
+    ElectroLabDialog.confirm('Delete "'+(p.name||"Untitled Circuit")+'"?', {title:"Delete Project?", okText:"DELETE", danger:true}).then(function(ok){
+      if(!ok)return;
+      write(read().filter(function(x){return x.id!==id;}));
+      render();setStatus("Project deleted.","ok");
+    });
   }
   function renameProject(id){
     var p=read().find(function(x){return x.id===id;});
     if(!p)return;
-    var n=prompt("New project name:",p.name||"Untitled Circuit");
-    if(n===null)return;
-    n=n.trim();if(!n)return;
-    p.name=n;p.savedAt=new Date().toISOString();
-    var list=read().map(function(x){return x.id===id?p:x;});
-    write(list);render();setStatus("✓ Project renamed.","ok");
+    ElectroLabDialog.prompt("New project name:", p.name||"Untitled Circuit", {title:"Rename Project", okText:"SAVE", inputLabel:"Project name"}).then(function(n){
+      if(n===null)return;
+      n=String(n).trim();if(!n)return;
+      p.name=n;p.savedAt=new Date().toISOString();
+      var list=read().map(function(x){return x.id===id?p:x;});
+      write(list);render();setStatus("✓ Project renamed.","ok");
+    });
   }
   function exportProject(id){
     var p=id?read().find(function(x){return x.id===id;}):current();
@@ -10853,15 +10814,18 @@ document.addEventListener('DOMContentLoaded', function(){
     reader.onload=function(){
       try{
         var p=JSON.parse(reader.result);
-        if(!p||!p.circuit||!Array.isArray(p.circuit.components)||!Array.isArray(p.circuit.wires))
-          throw new Error("Invalid project");
+        var validator=window.ElectroLabSecurity && window.ElectroLabSecurity.validateProject;
+        if(typeof validator!=="function") throw new Error("Canonical project validator unavailable");
+        var checked=validator(p);
+        if(!checked || !checked.ok) throw new Error(checked && checked.error || "Invalid project");
+        p=checked.value;
         p.id="p_"+Date.now()+"_"+Math.floor(Math.random()*10000);
         p.name=String(p.name||"Imported Circuit");
         p.managerVersion="5.70";
         p.savedAt=new Date().toISOString();
         var list=read();list.unshift(p);if(list.length>25)list=list.slice(0,25);
         write(list);render();setStatus("✓ Imported: "+p.name,"ok");
-      }catch(e){setStatus("Invalid ElectroLab project file.","danger");}
+      }catch(e){setStatus("Invalid NIL SparkLab project file.","danger");}
     };
     reader.readAsText(file);
   }
@@ -10916,9 +10880,10 @@ document.addEventListener('DOMContentLoaded', function(){
     if(e.target.id==="elab-v570-save")saveCurrent(nameInput.value);
     if(e.target.id==="elab-v570-new"){
       var a=api();
-      if(a&&document.documentElement.dataset.unsaved==="true" &&
-         !confirm("Current project has unsaved changes. Start a new project?"))return;
-      if(a&&a.newProject){a.newProject();nameInput.value="Untitled Circuit";lastHash="";setStatus("New project ready.","ok");render();}
+      function startNew(){if(a&&a.newProject){a.newProject();nameInput.value="Untitled Circuit";lastHash="";setStatus("New project ready.","ok");render();}}
+      if(a&&document.documentElement.dataset.unsaved==="true")
+        ElectroLabDialog.confirm("Current project has unsaved changes. Start a new project?", {title:"Start New Project?", okText:"START NEW", danger:true}).then(function(ok){if(ok)startNew();});
+      else startNew();
     }
     if(e.target.id==="elab-v570-refresh")render();
     if(e.target.id==="elab-v570-export-current")exportProject();
@@ -11157,7 +11122,7 @@ document.addEventListener('DOMContentLoaded', function(){
     b.onclick=function(){
       var cs=window.builderCanvasComps;
       if(Array.isArray(cs)&&cs.length) window.ElectroLabAdvancedProperties.open(cs[0].id);
-      else alert("Add a component first, then open Properties.");
+      else if(window.elabV575Toast) elabV575Toast("Add a component first, then open Properties."); else ElectroLabDialog.alert("Add a component first, then open Properties.",{title:"No Component"});
     };
     anchor.parentElement.appendChild(b);
   });
@@ -11843,7 +11808,7 @@ window.ElectroLabFinalAudit={
 document.addEventListener("DOMContentLoaded",function(){
   refreshStatus();
   var a=window.ElectroLabFinalAudit.run();
-  if(a.passed===a.total)toast("ElectroLab v5.77 — Final systems ready");
+  if(a.passed===a.total)toast("NIL SparkLab v5.77 — Final systems ready");
   else toast("Final build loaded · "+a.passed+"/"+a.total+" modules detected");
 });
 })();
@@ -11920,7 +11885,7 @@ window.elabOpenLearningTool=function(t){
     var cs=window.builderCanvasComps;
     if(window.ElectroLabAdvancedProperties){
      if(Array.isArray(cs)&&cs.length)window.ElectroLabAdvancedProperties.open(cs[0].id);
-     else alert("Add a component first, then open Properties.");
+     else if(window.elabV575Toast) elabV575Toast("Add a component first, then open Properties."); else ElectroLabDialog.alert("Add a component first, then open Properties.",{title:"No Component"});
     }break;
    case"solver":if(window.ElectroLabRealtimeSolver)window.ElectroLabRealtimeSolver.open();break;
    case"waveform":if(window.ElectroLabWaveformAnalysis)window.ElectroLabWaveformAnalysis.open();break;
@@ -12050,13 +12015,16 @@ window.elabProjectMenuOpen=function(action){
   if(action==="save"){if(core&&core.save){core.save();if(st)st.textContent="Project saved locally.";return}}
   if(action==="load"){if(core&&core.load){st&&(st.textContent=core.load()?"Project loaded.":"No saved project found.");return}}
   if(action==="new" && core&&core.newProject){
-    if(document.documentElement.dataset.unsaved==="true" && !confirm("You have unsaved changes. Start a new project?"))return;
-    core.newProject();if(st)st.textContent="New project ready.";return;
+    function startNew(){core.newProject();if(st)st.textContent="New project ready.";}
+    if(document.documentElement.dataset.unsaved==="true")
+      ElectroLabDialog.confirm("You have unsaved changes. Start a new project?", {title:"Start New Project?", okText:"START NEW", danger:true}).then(function(ok){if(ok)startNew();});
+    else startNew();
+    return;
   }
   if(action==="export"){if(core&&core.exportProject){core.exportProject();if(st)st.textContent="Project exported.";return}}
   if(action==="import"){
     var file=document.getElementById("elab-v528-file");
-    if(file){file.value="";file.click();if(st)st.textContent="Choose an ElectroLab project file.";return}
+    if(file){file.value="";file.click();if(st)st.textContent="Choose a NIL SparkLab project file.";return}
   }
   if(st)st.textContent="Project engine is not ready yet.";
  }catch(e){console.warn("Project menu error:",e)}
@@ -12353,7 +12321,7 @@ document.addEventListener("DOMContentLoaded",function(){
 <div id="elab-mini-tour" aria-hidden="true">
   <div class="mt-card">
     <div class="mt-step" id="elab-mt-step">STEP 1 OF 3</div>
-    <div class="mt-title" id="elab-mt-title">Welcome to ElectroLab</div>
+    <div class="mt-title" id="elab-mt-title">Welcome to NIL SparkLab</div>
     <div class="mt-desc" id="elab-mt-desc">Interactive electrical & electronics virtual lab. Chalo 3 quick steps mein start karte hain.</div>
     <div class="mt-dots" id="elab-mt-dots">
       <span class="mt-dot active"></span><span class="mt-dot"></span><span class="mt-dot"></span>
@@ -12462,7 +12430,7 @@ document.addEventListener("DOMContentLoaded",function(){
     {keys:["battery","source","voltage","9v","power nahi","battery kaise"], a:"Battery/DC source circuit ki energy deta hai. Properties se voltage badlo. Polarity sahi rakho — LED aur diode polarity sensitive hote hain."},
     {keys:["quiz","exam","test","paper","sawal"], a:"Quiz section scored questions deta hai. Pehle Components + ek practical complete karke quiz do — score better aata hai."},
     {keys:["share","link","bhejo","qr","share karo","bhejna"], a:"Simulate ke baad Health panel se Copy Share Link, ya right side ▣ se QR banao. Link WhatsApp/classroom pe bhej sakte ho."},
-    {keys:["hello","hi","namaste","help","madad","hello bhai","hey","kaise ho","assistant"], a:"Namaste! Main tumhara ElectroLab coach hoon — Hinglish mein bhi pooch sakte ho. Example: \"led nahi jal raha\", \"wire kaise banaye\", \"ohm ka niyam\". Neeche chips bhi try karo."},
+    {keys:["hello","hi","namaste","help","madad","hello bhai","hey","kaise ho","assistant"], a:"Namaste! Main tumhara NIL SparkLab coach hoon — Hinglish mein bhi pooch sakte ho. Example: \"led nahi jal raha\", \"wire kaise banaye\", \"ohm ka niyam\". Neeche chips bhi try karo."},
     {keys:["motor","dc motor","motor nahi"], a:"DC motor load hai. Battery + switch + motor se basic drive banao. Preset: Motor + Switch. Guided 🎓 se bhi steps milenge."},
     {keys:["capacitor","rc","charging","capacitor kya"], a:"Capacitor energy store karta hai. RC charging mein time constant τ = R×C. Practical Lab mein experiment try karo."},
     {keys:["multimeter","measure","voltage measure","current measure","meter"], a:"Learning Lab → Multimeter. Probes canvas pe drag karke V / mA / continuity mode select karo."},
@@ -13141,32 +13109,31 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
     var base = location.href.split("#")[0].split("?")[0];
     return base + "#elab=" + code;
   }
-  function copyShareLink(){
+  async function copyShareLink(){
     var url = buildShareUrl();
     if(!url){
       if(window.elabV575Toast) elabV575Toast("Pehle circuit banao");
-      else alert("Pehle circuit banao");
+      else await ElectroLabDialog.alert("Build a circuit first.", {title:"Nothing to Share"});
       return;
     }
-    function ok(){
+    async function ok(){
       unlockBadge("share");
       if(window.elabSFX) elabSFX.click();
       if(window.elabV575Toast) elabV575Toast("Share link copied");
-      else alert("Link copied");
+      else await ElectroLabDialog.alert("Link copied.", {title:"Share Link"});
     }
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(ok).catch(function(){
-        prompt("Copy this link:", url); ok();
-      });
+      try{ await navigator.clipboard.writeText(url); await ok(); }
+      catch(e){ var value=await ElectroLabDialog.prompt("Copy this link:", url, {title:"Copy Share Link", okText:"DONE", inputLabel:"Share URL"}); if(value!==null) await ok(); }
     } else {
-      prompt("Copy this link:", url); ok();
+      var value=await ElectroLabDialog.prompt("Copy this link:", url, {title:"Copy Share Link", okText:"DONE", inputLabel:"Share URL"}); if(value!==null) await ok();
     }
   }
   function nativeShare(){
     var url = buildShareUrl();
     if(!url){ if(window.elabV575Toast) elabV575Toast("Pehle circuit banao"); return; }
     if(navigator.share){
-      navigator.share({title:"ElectroLab Circuit", text:"Mera circuit dekho", url:url})
+      navigator.share({title:"NIL SparkLab Circuit", text:"Mera circuit dekho", url:url})
         .then(function(){ unlockBadge("share"); })
         .catch(function(){ copyShareLink(); });
     } else copyShareLink();
@@ -13183,25 +13150,12 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
     if(!data || !Array.isArray(data.c)) return;
     try{
       if(typeof window.showSection === "function") window.showSection("builder");
-      // Best-effort restore: clear and add via existing APIs when possible
-      if(typeof window.resetBuilder === "function") window.resetBuilder();
-      // Direct inject if arrays exist
-      if(Array.isArray(window.builderCanvasComps)){
-        window.builderCanvasComps.length = 0;
-        data.c.forEach(function(item){
-          window.builderCanvasComps.push({
-            id: item.id || ("c_"+Date.now()+Math.random()),
-            type: item.type, name: item.name||item.type,
-            x: item.x||40, y: item.y||40,
-            v: item.v, r: item.r, rotation: item.rotation||0,
-            terminals: ["A","B"]
-          });
-        });
-      }
-      if(Array.isArray(window.builderWires) && Array.isArray(data.w)){
-        window.builderWires.length = 0;
-        data.w.forEach(function(w){ window.builderWires.push(w); });
-      }
+      var validator=window.ElectroLabSecurity&&window.ElectroLabSecurity.validateProject;
+      if(typeof validator!=="function") return false;
+      var normalized={version:"5.62",name:"Shared Circuit",circuit:{components:Array.isArray(data.c)?data.c:[],wires:Array.isArray(data.w)?data.w:[]},simulation:{}};
+      var checked=validator(normalized);
+      if(!checked||!checked.ok){ console.warn("Shared circuit rejected:",checked&&checked.error); return false; }
+      window.ElectroLabBuilderState.replace(checked.value.circuit.components,checked.value.circuit.wires);
       if(typeof window.renderBuilderCanvas === "function") window.renderBuilderCanvas();
       var ban = document.getElementById("elab-shared-banner");
       if(ban) ban.classList.add("show");
@@ -13425,7 +13379,7 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
         to: {compId:b.id, term: String(toTerm)}
       };
       try{
-        if(Array.isArray(window.builderWires)) window.builderWires.push(wire);
+        if(window.ElectroLabBuilderState && typeof window.ElectroLabBuilderState.addWires === "function") window.ElectroLabBuilderState.addWires([wire]);
         added++;
       }catch(e){}
     }
@@ -13522,7 +13476,7 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
   function buildReport(){
     var cs=comps(), ws=wires();
     var lines=[];
-    lines.push("ElectroLab Lab Report");
+    lines.push("NIL SparkLab Lab Report");
     lines.push("Version: "+((window.ElectroLabConfig&&ElectroLabConfig.version)||"5.95 Pro"));
     lines.push("Date: "+new Date().toLocaleString());
     lines.push("");
@@ -13565,7 +13519,9 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
     if(!w) return;
     var body=document.getElementById("elab-report-body").textContent;
     var safeBody = body.replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    w.document.write("<html><head><title>ElectroLab Report</title></head><body style='font-family:monospace;white-space:pre-wrap;padding:24px'>" + safeBody + "</body></html>");
+    w.document.write("<html><head><title>NIL SparkLab Report</title></head><body style='font-family:monospace;white-space:pre-wrap;padding:24px'>" + safeBody + "
+
+</body></html>");
     w.document.close();
   });
 })();
@@ -15332,10 +15288,10 @@ else boot();
     badge.className = pct>=85 ? "ok" : pct>=60 ? "warn" : "bad";
     badge.textContent = "Security " + pct + "% · " + score + "/" + total + (notes.length ? " · " + notes[0] : " · OK");
     badge.onclick = function(){
-      var msg = "ElectroLab security self-check\nScore: "+score+"/"+total+" ("+pct+"%)\n";
+      var msg = "NIL SparkLab security self-check\nScore: "+score+"/"+total+" ("+pct+"%)\n";
       if(notes.length) msg += "Issues:\n- "+notes.join("\n- ");
       else msg += "No major client checks failed.";
-      alert(msg);
+      if(window.ElectroLabDialog) ElectroLabDialog.alert(msg,{title:"Security Self-Check",alertdialog:true});
     };
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", function(){ setTimeout(run, 600); });
@@ -15409,52 +15365,26 @@ else boot();
     return keys.every(k => scanString(k) && deepScan(value[k], depth + 1));
   }
 
-  function validateProject(project){
-    if(!project || typeof project !== "object" || Array.isArray(project)) return false;
-    if(!deepScan(project, 0)) return false;
-
-    const comps = Array.isArray(project.components) ? project.components : [];
-    const wires = Array.isArray(project.wires) ? project.wires : [];
-
-    if(comps.length > LIMITS.maxComponents || wires.length > LIMITS.maxWires) return false;
-
-    const ids = new Set();
-    for(const c of comps){
-      if(!c || typeof c !== "object" || typeof c.id !== "string") return false;
-      if(ids.has(c.id)) return false;
-      ids.add(c.id);
-      if(c.type !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(String(c.type))) return false;
-      for(const n of ["x","y","rotation"]){
-        if(c[n] !== undefined && (!Number.isFinite(Number(c[n])) || Math.abs(Number(c[n])) > 1000000)) return false;
-      }
-    }
-
-    for(const w of wires){
-      if(!w || typeof w !== "object") return false;
-      const from = w.from || w.source || w.a;
-      const to = w.to || w.target || w.b;
-      if(from && typeof from === "string" && !ids.has(from)) return false;
-      if(to && typeof to === "string" && !ids.has(to)) return false;
-    }
-    return true;
-  }
-
-  // Public security API for future modules and audits.
+  // Compatibility API only. Project structure validation is owned by the
+  // canonical ElectroLabSecurity validator below; this layer retains only its
+  // independent text-size/legacy safety checks.
   window.ElectroLabSecurityV6 = Object.freeze({
     version: "6.0",
     limits: LIMITS,
     scanString,
     deepScan,
-    validateProject,
     validateImportText(text){
       if(typeof text !== "string") return {ok:false,reason:"Not text"};
       if(text.length > LIMITS.maxProjectBytes) return {ok:false,reason:"Project exceeds 2 MB limit"};
       if(!scanString(text)) return {ok:false,reason:"Potentially unsafe content detected"};
       try{
         const obj = JSON.parse(text);
-        return validateProject(obj)
-          ? {ok:true,project:obj}
-          : {ok:false,reason:"Project schema/security validation failed"};
+        const canonical = window.ElectroLabSecurity && window.ElectroLabSecurity.validateProject;
+        if(typeof canonical !== "function") return {ok:false,reason:"Canonical project validator unavailable"};
+        const result = canonical(obj);
+        return result && result.ok
+          ? {ok:true,project:result.value}
+          : {ok:false,reason:(result && result.error) || "Project schema/security validation failed"};
       }catch(e){
         return {ok:false,reason:"Invalid project JSON"};
       }
@@ -15503,7 +15433,9 @@ else boot();
   // Safe JSON parsing helper for modules that opt into it.
   window.ElectroLabSafeJSON = Object.freeze({
     parse(text){
-      const result = window.ElectroLabSecurityV6.validateImportText(text);
+      const canonical = window.ElectroLabSecurity && window.ElectroLabSecurity.validateImportText;
+      if(typeof canonical !== "function") { block("canonical project validator unavailable"); return null; }
+      const result = canonical(text);
       if(!result.ok){
         block(result.reason);
         return null;
@@ -15585,7 +15517,7 @@ else boot();
 
 <div id="elab-v81-admin-panel" aria-hidden="true">
   <div id="elab-v81-admin-card" role="dialog" aria-modal="true" aria-labelledby="elab-v81-admin-title">
-    <h2 id="elab-v81-admin-title">ElectroLab Owner Analytics</h2>
+    <h2 id="elab-v81-admin-title">NIL SparkLab Owner Analytics</h2>
     <div style="opacity:.7;font-size:12px">v8.1 • owner-only local analytics foundation</div>
 
     <div class="elab-v81-grid">
@@ -16096,7 +16028,7 @@ else boot();
 <div id="elab-v86-security-dashboard" aria-hidden="true">
   <div id="elab-v86-security-card" role="dialog" aria-modal="true" aria-labelledby="elab-v86-title">
     <h2 id="elab-v86-title" style="margin:0">Owner Security Dashboard</h2>
-    <div style="font-size:12px;opacity:.7">ElectroLab v8.6 • private security health view</div>
+    <div style="font-size:12px;opacity:.7">NIL SparkLab v8.6 • private security health view</div>
 
     <div class="elab-v86-statgrid">
       <div class="elab-v86-stat">Security score<strong id="elab-v86-score">—</strong></div>
@@ -17712,7 +17644,7 @@ if(!panel || document.getElementById("elab-v1pro-security")) return;
 const box=document.createElement("section");
 box.id="elab-v1pro-security";
 box.innerHTML=`
-<strong>ElectroLab v1 PRO — Security Foundation</strong>
+<strong>NIL SparkLab v1 PRO — Security Foundation</strong>
 <div style="font-size:11px;opacity:.68;margin-top:3px">Consolidated owner view • architecture → implementation gate</div>
 <div class="elab-v1pro-grid" id="elab-v1pro-grid"></div>
 <div class="elab-v1pro-note">
@@ -18745,17 +18677,15 @@ items.forEach(x=>{
     return {v:1, c:c, w:w, at:Date.now()};
   }
   function applySnap(data){
-    if(!data||!data.c) return;
+    if(!data||!Array.isArray(data.c)) return;
     goBuilder();
     try{
-      if(Array.isArray(window.builderCanvasComps)){
-        window.builderCanvasComps.length=0;
-        data.c.forEach(function(x){ window.builderCanvasComps.push(x); });
-      }
-      if(Array.isArray(window.builderWires)){
-        window.builderWires.length=0;
-        (data.w||[]).forEach(function(x){ window.builderWires.push(x); });
-      }
+      var validator=window.ElectroLabSecurity&&window.ElectroLabSecurity.validateProject;
+      if(typeof validator!=="function") return;
+      var checked=validator({version:"5.62",name:"Classroom Snapshot",circuit:{components:data.c,wires:Array.isArray(data.w)?data.w:[]},simulation:{}});
+      if(!checked||!checked.ok){ console.warn("ElectroLab classroom snapshot rejected:",checked&&checked.error); return; }
+      var v=checked.value;
+      window.ElectroLabBuilderState.replace(v.circuit.components,v.circuit.wires);
       if(typeof window.renderBuilderCanvas==="function") window.renderBuilderCanvas();
     }catch(e){ console.warn(e); }
   }
@@ -19000,28 +18930,12 @@ items.forEach(x=>{
     if(!data||!Array.isArray(data.c)) return false;
     try{
       if(typeof window.showSection==="function") window.showSection("builder");
-      if(typeof window.resetBuilder==="function") window.resetBuilder();
-      if(Array.isArray(window.builderCanvasComps)){
-        window.builderCanvasComps.length=0;
-        data.c.forEach(function(item, idx){
-          var type=item.type||"resistor";
-          if(typeof window.addBuilderComp==="function"){
-            try{
-              window.addBuilderComp(type, {x:item.x||(40+idx*20), y:item.y||(40+idx*15), v:item.v, r:item.r, rotation:item.rotation||0});
-              return;
-            }catch(e){}
-          }
-          window.builderCanvasComps.push({
-            id:item.id||("c_"+Date.now()+"_"+idx), type:type, name:item.name||type,
-            x:item.x||40, y:item.y||40, v:item.v, r:item.r, rotation:item.rotation||0,
-            terminals:["A","B"]
-          });
-        });
-      }
-      if(Array.isArray(window.builderWires) && Array.isArray(data.w)){
-        window.builderWires.length=0;
-        data.w.forEach(function(w){ window.builderWires.push(w); });
-      }
+      var validator=window.ElectroLabSecurity&&window.ElectroLabSecurity.validateProject;
+      if(typeof validator!=="function") return false;
+      var normalized={version:"5.62",name:"Shared Circuit",circuit:{components:Array.isArray(data.c)?data.c:[],wires:Array.isArray(data.w)?data.w:[]},simulation:{}};
+      var checked=validator(normalized);
+      if(!checked||!checked.ok){ console.warn("Shared circuit rejected:",checked&&checked.error); return false; }
+      window.ElectroLabBuilderState.replace(checked.value.circuit.components,checked.value.circuit.wires);
       if(typeof window.renderBuilderCanvas==="function") window.renderBuilderCanvas();
       var ban=document.getElementById("elab-shared-banner");
       if(ban) ban.classList.add("show");
@@ -19170,7 +19084,8 @@ items.forEach(x=>{
 
   function validateProject(raw){
     if(!raw || typeof raw!=='object' || Array.isArray(raw)) return {ok:false,error:'Project must be a JSON object'};
-    if(raw.html!==undefined) return {ok:false,error:'HTML payloads are not accepted; import the structured circuit format'};
+    // Legacy exports may contain a visual `html` snapshot. It is never trusted or restored;
+    // structured circuit data below is the only state accepted by the validator.
     if(raw.name!==undefined && !safeString(raw.name,SEC.maxNameLength)) return {ok:false,error:'Invalid project name'};
     if(!raw.circuit || typeof raw.circuit!=='object' || Array.isArray(raw.circuit)) return {ok:false,error:'Missing circuit object'};
     var comps=raw.circuit.components, wires=raw.circuit.wires;
@@ -19284,6 +19199,15 @@ items.forEach(x=>{
   window.ElectroLabSecurity={
     version:SEC.version,
     validateProject:validateProject,
+    validateImportText:function(text){
+      if(typeof text!=="string") return {ok:false,reason:"Not text"};
+      if(text.length>SEC.maxImportBytes) return {ok:false,reason:"Project exceeds 2 MB limit"};
+      try{
+        var parsed=JSON.parse(text);
+        var result=validateProject(parsed);
+        return result&&result.ok?{ok:true,project:result.value}:{ok:false,reason:(result&&result.error)||"Invalid project"};
+      }catch(e){return {ok:false,reason:"Invalid project JSON"};}
+    },
     sanitizeText:sanitizeText,
     safeImport:safeImport,
     audit:audit,
@@ -19631,7 +19555,7 @@ window.ElectroLabCircuitTeacherV67=Object.freeze({snapshot:circuitSnapshot,promp
 function mount(){
  if(id('elab-v67-tools'))return;
  const root=document.createElement('div');root.id='elab-v67-tools';
- root.innerHTML=`<button id="elab-v67-launch" type="button">⚡ Engineering Tools</button><div id="elab-v67-panel" aria-hidden="true"><div class="elab-v67-card"><div class="elab-v67-head"><div><b style="font-size:16px">ElectroLab v6.7 Engineering Upgrade</b><div style="font-size:10px;color:#64748b;margin-top:3px">Unified architecture • analysis • scope • physics • AI bridge</div></div><button class="elab-v67-close" id="elab-v67-close">Close</button></div><div class="elab-v67-grid" id="elab-v67-status"></div><div style="margin-top:14px"><b style="font-size:12px">Oscilloscope CH1</b><canvas id="elab-v67-scope"></canvas><div class="elab-v67-controls"><label>V/div <input id="elab-v67-vdiv" type="number" min="0.1" step="0.1" value="5"></label><label>ms/div <input id="elab-v67-tdiv" type="number" min="1" step="1" value="20"></label><button class="elab-v67-close" id="elab-v67-scope-run">Run/Stop</button></div><div id="elab-v67-scope-readout" class="elab-v67-note">Scope idle</div></div><div style="margin-top:14px"><b style="font-size:12px">RLC / Transient Analyzer</b><div class="elab-v67-controls"><label>R Ω <input id="elab-v67-r" type="number" step="0.1" value="470"></label><label>L mH <input id="elab-v67-l" type="number" step="0.1" value="10"></label><label>C µF <input id="elab-v67-c" type="number" step="0.1" value="100"></label><label>f Hz <input id="elab-v67-f" type="number" step="0.1" value="50"></label><button class="elab-v67-close" id="elab-v67-analyze">Analyze</button></div><div id="elab-v67-analysis-result" class="elab-v67-note">Enter values and analyze.</div></div><div style="margin-top:14px"><b style="font-size:12px">AI Circuit Teacher</b><div class="elab-v67-controls"><button class="elab-v67-close" id="elab-v67-explain">Explain this circuit</button></div><div id="elab-v67-ai-result" class="elab-v67-note">Uses the current Builder snapshot and the existing Assistant when available.</div></div><div class="elab-v67-note">The analyzer uses the existing Builder state. Advanced component models are explicit APIs; unsupported circuit topologies are not silently guessed. Admin privileges remain server-authoritative.</div></div></div>`;
+ root.innerHTML=`<button id="elab-v67-launch" type="button">⚡ Engineering Tools</button><div id="elab-v67-panel" aria-hidden="true"><div class="elab-v67-card"><div class="elab-v67-head"><div><b style="font-size:16px">NIL SparkLab v6.7 Engineering Upgrade</b><div style="font-size:10px;color:#64748b;margin-top:3px">Unified architecture • analysis • scope • physics • AI bridge</div></div><button class="elab-v67-close" id="elab-v67-close">Close</button></div><div class="elab-v67-grid" id="elab-v67-status"></div><div style="margin-top:14px"><b style="font-size:12px">Oscilloscope CH1</b><canvas id="elab-v67-scope"></canvas><div class="elab-v67-controls"><label>V/div <input id="elab-v67-vdiv" type="number" min="0.1" step="0.1" value="5"></label><label>ms/div <input id="elab-v67-tdiv" type="number" min="1" step="1" value="20"></label><button class="elab-v67-close" id="elab-v67-scope-run">Run/Stop</button></div><div id="elab-v67-scope-readout" class="elab-v67-note">Scope idle</div></div><div style="margin-top:14px"><b style="font-size:12px">RLC / Transient Analyzer</b><div class="elab-v67-controls"><label>R Ω <input id="elab-v67-r" type="number" step="0.1" value="470"></label><label>L mH <input id="elab-v67-l" type="number" step="0.1" value="10"></label><label>C µF <input id="elab-v67-c" type="number" step="0.1" value="100"></label><label>f Hz <input id="elab-v67-f" type="number" step="0.1" value="50"></label><button class="elab-v67-close" id="elab-v67-analyze">Analyze</button></div><div id="elab-v67-analysis-result" class="elab-v67-note">Enter values and analyze.</div></div><div style="margin-top:14px"><b style="font-size:12px">AI Circuit Teacher</b><div class="elab-v67-controls"><button class="elab-v67-close" id="elab-v67-explain">Explain this circuit</button></div><div id="elab-v67-ai-result" class="elab-v67-note">Uses the current Builder snapshot and the existing Assistant when available.</div></div><div class="elab-v67-note">The analyzer uses the existing Builder state. Advanced component models are explicit APIs; unsupported circuit topologies are not silently guessed. Admin privileges remain server-authoritative.</div></div></div>`;
  document.body.appendChild(root);
  id('elab-v67-launch').onclick=()=>{id('elab-v67-panel').classList.add('open');id('elab-v67-panel').setAttribute('aria-hidden','false');refresh();openScope()};
  id('elab-v67-close').onclick=()=>{closeScope();id('elab-v67-panel').classList.remove('open');id('elab-v67-panel').setAttribute('aria-hidden','true')};
@@ -22304,7 +22228,7 @@ function solveElectrical(s){
 /* v8.15 — SPICE netlist generation */
 function spiceNetlist(c){
   c=c||{};
-  var lines=["* ElectroLab generated netlist"];
+  var lines=["* NIL SparkLab generated netlist"];
   (c.components||[]).forEach(function(x){
     var ref=x.ref||"X",v=x.value==null?"":x.value;
     lines.push("* "+ref+" "+String(x.type||"unknown")+" "+String(v));
@@ -24853,28 +24777,38 @@ window.ElectroLabSafeWifiV1013={
 <script id="elab-v1017-clean-advanced">
 (function(){
 "use strict";
-var CFG={password:"har har mahadev",key:"ELAB_ADV_V1017",minutes:30};
-
-function unlocked(){
-  try{return Number(sessionStorage.getItem(CFG.key)||0)>Date.now();}catch(e){return false;}
+function isStaticHost(){
+  try{
+    var h=location.hostname||"";
+    return location.protocol==="file:" || /github\.io$|pages\.dev$|netlify\.app$|localhost|127\.0\.0\.1/.test(h) || h==="";
+  }catch(e){return true;}
 }
 function gate(){
   var old=document.getElementById("elab-adv-v1017-gate"); if(old)old.remove();
   var g=document.createElement("div");g.id="elab-adv-v1017-gate";g.style.display="flex";
   var b=document.createElement("div");b.className="box";
-  b.innerHTML="<h2 style='margin:0 0 8px'>Advanced Canvas Access</h2><p style='color:#334155;line-height:1.5'>Enter the administrator-provided password to open the advanced circuit canvas.</p>";
-  var i=document.createElement("input");i.type="password";i.placeholder="Password";i.autocomplete="off";
+  b.innerHTML="<h2 style='margin:0 0 8px'>Advanced Canvas Access</h2><p style='color:#334155;line-height:1.5'>Administrator authentication is required. The browser does not contain or compare an advanced-canvas password.</p>";
+  var id=document.createElement("input");id.type="text";id.placeholder="Admin ID";id.autocomplete="username";
+  var i=document.createElement("input");i.type="password";i.placeholder="Password";i.autocomplete="current-password";
   var m=document.createElement("div");m.style.cssText="color:#b91c1c;font:13px Arial;min-height:20px;margin:8px 0";
-  var ok=document.createElement("button");ok.className="primary";ok.textContent="Unlock";
+  var ok=document.createElement("button");ok.className="primary";ok.textContent="Authenticate";
   var no=document.createElement("button");no.textContent="Cancel";no.style.marginLeft="6px";
   no.onclick=function(){g.remove();};
-  function go(){
-    if(i.value.trim().toLowerCase()!==CFG.password){m.textContent="Incorrect password.";return;}
-    try{sessionStorage.setItem(CFG.key,String(Date.now()+CFG.minutes*60000));}catch(e){}
-    g.remove();builder();
+  async function go(){
+    if(!id.value.trim()||!i.value){m.textContent="Enter your Admin ID and password.";return;}
+    if(isStaticHost()){m.textContent="Admin backend is not connected. Advanced Canvas requires the deployed backend.";return;}
+    m.style.color="#475569";m.textContent="Authenticating securely…";ok.disabled=true;
+    try{
+      var auth=window.ElectroLabAdminAuthV94 || window.ElectroLabAdminAuth;
+      if(!auth || typeof auth.login!=="function") throw new Error("AUTH_UNAVAILABLE");
+      var result=await auth.login(id.value.trim(),i.value);
+      if(!result || !result.ok){m.style.color="#b91c1c";m.textContent="Authentication failed.";ok.disabled=false;return;}
+      if(result.role && result.role!=="admin"){m.style.color="#b91c1c";m.textContent="Administrator role required.";ok.disabled=false;return;}
+      g.remove();builder();
+    }catch(e){m.style.color="#b91c1c";m.textContent="Authentication service unavailable.";ok.disabled=false;}
   }
-  ok.onclick=go;i.addEventListener("keydown",function(e){if(e.key==="Enter")go();});
-  b.appendChild(i);b.appendChild(ok);b.appendChild(no);b.appendChild(m);g.appendChild(b);document.body.appendChild(g);i.focus();
+  ok.onclick=go;i.addEventListener("keydown",function(e){if(e.key==="Enter")go();});id.addEventListener("keydown",function(e){if(e.key==="Enter")i.focus();});
+  b.appendChild(id);b.appendChild(i);b.appendChild(ok);b.appendChild(no);b.appendChild(m);g.appendChild(b);document.body.appendChild(g);id.focus();
 }
 function builder(){
   var old=document.getElementById("elab-adv-v1017-builder");if(old)old.remove();
@@ -24948,11 +24882,22 @@ function builder(){
   window.addEventListener("resize",resize);
   setTimeout(resize,50);
 }
+async function requestOpen(){
+  if(isStaticHost()){gate();return true;}
+  try{
+    var auth=window.ElectroLabAdminAuthV94 || window.ElectroLabAdminAuth;
+    if(auth && typeof auth.session==="function"){
+      var session=await auth.session();
+      if(session && session.ok && (!session.data || session.data.role==="admin")){builder();return true;}
+    }
+  }catch(e){}
+  gate();return true;
+}
 function handle(text){
   if(!/^\s*advance(?:\s+canvas)?\s*$/i.test(String(text||"")))return false;
-  if(unlocked())builder();else gate();return true;
+  requestOpen();return true;
 }
-window.ElectroLabAdvancedCanvasV1017={version:"10.18",open:builder,handle:handle};
+window.ElectroLabAdvancedCanvasV1017={version:"10.18",open:requestOpen,handle:handle};
 function bind(){
   var ss=["#elab-smart-input","#elab-assistant-input","#assistantInput","textarea[placeholder*='Ask' i]","input[placeholder*='Ask' i]"];
   document.querySelectorAll(ss.join(",")).forEach(function(el){
@@ -25182,12 +25127,12 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
 
     if(!SR){
       mic.title="Voice input unavailable";
-      mic.onclick=function(){notify("Voice input is not supported here. Use Chrome/Chromium on the HTTPS ElectroLab site.");};
+      mic.onclick=function(){notify("Voice input is not supported here. Use Chrome/Chromium on the HTTPS NIL SparkLab site.");};
       return true;
     }
     if((isContent||isFile) && !secure){
-      mic.title="Open ElectroLab over HTTPS for voice input";
-      mic.onclick=function(){notify("Mic cannot reliably use Speech Recognition from this local content:// file. Open the ElectroLab HTTPS site and allow microphone access.");};
+      mic.title="Open NIL SparkLab over HTTPS for voice input";
+      mic.onclick=function(){notify("Mic cannot reliably use Speech Recognition from this local content:// file. Open the NIL SparkLab HTTPS site and allow microphone access.");};
       return true;
     }
 
@@ -25234,6 +25179,34 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
     openDiagram:function(q){var s=String(q||"led series diagram");return renderDiagramModal(s,getDiagramResult(s));},
     micAvailable:function(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);},
     context:{protocol:location.protocol,secure:!!window.isSecureContext}
+  });
+})();
+</script>
+
+<script id="elab-v1021-phase1-regression">
+(function(){
+  "use strict";
+  window.ElectroLabPhase1Regression=Object.freeze({
+    run:function(){
+      var out=[];
+      function t(id,ok,detail){out.push({id:id,ok:!!ok,detail:detail||""});}
+      var sec=window.ElectroLabSecurity;
+      t("canonical-validator",!!sec&&typeof sec.validateProject==="function");
+      t("canonical-import-text",!!sec&&typeof sec.validateImportText==="function");
+      if(sec&&typeof sec.validateProject==="function"){
+        var valid={version:"5.62",name:"Regression",circuit:{components:[{id:"c1",type:"resistor",x:10,y:10,terminals:["T1","T2"],r:470}],wires:[]},simulation:{}};
+        var good=sec.validateProject(valid);
+        t("valid-project",good&&good.ok,good&&good.error);
+        var bad=sec.validateProject({version:"5.62",circuit:{components:[{id:"c1",type:"resistor",x:10,y:10,terminals:["T1","T2"]},{id:"c1",type:"resistor",x:20,y:20}],wires:[]}});
+        t("duplicate-id-rejected",!(bad&&bad.ok),bad&&bad.error);
+        var pp=sec.validateProject({version:"5.62",circuit:{components:[{id:"c1",type:"resistor",x:10,y:10,terminals:["T1","T2"],constructor:"bad"}],wires:[]}});
+        t("dangerous-key-rejected",!(pp&&pp.ok),pp&&pp.error);
+      }
+      t("canonical-builder-state",!!window.ElectroLabBuilderState&&typeof window.ElectroLabBuilderState.replace==="function"&&typeof window.ElectroLabBuilderState.setWires==="function");
+      t("canonical-history",typeof window.undoAction==="function"&&typeof window.redoAction==="function"&&typeof window.saveStateForUndo==="function");
+      t("no-zoom-lock",!/user-scalable\s*=\s*no|max(?:imum)?-scale\s*=\s*1/i.test(document.querySelector('meta[name="viewport"]')?.getAttribute("content")||""));
+      return {ok:out.every(function(x){return x.ok;}),tests:out};
+    }
   });
 })();
 </script>
