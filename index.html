@@ -15090,10 +15090,29 @@ function visionBoxHtml(){
 var D=window.ElectroLabDiagrams || {};
 var prevAnswer=D.answer;
 D.answer=function(q){
-  var r=answerSync(q);
-  if(r) return r;
-  if(typeof prevAnswer==="function") return prevAnswer(q);
-  return null;
+  /* v10.32 FIX: Diagram Library "wrong preview" bug.
+     ROOT CAUSE: this pipeline's answerSync() was called FIRST, before the
+     purpose-built diagram engines it wraps (elab-circuit-diagram-engine and
+     its v51/v52 extensions). answerSync() matches against a 60-item
+     VERIFIED-netlist list where most entries (buck_block, boost_block,
+     transformer_load, etc.) are generic battery→resistor→lamp/led
+     placeholders, and falls back further to textToNetlist(), which silently
+     defaults to battery+resistor+led whenever it can't recognize a keyword
+     in the query. Because this wrapper ran first, a known diagram with a
+     correct, specific definition further down the chain (Buck Converter,
+     Boost Converter, Transformer + DC Supply, Center-tap Rectifier,
+     H-Bridge, Common-emitter Amplifier, DOL/Star-Delta Starter, etc.) could
+     be silently replaced by the wrong generic preview.
+     FIX: try the existing purpose-built chain first; only fall back to this
+     pipeline's generic/heuristic netlist matching when that chain has no
+     definition at all. No diagram data changes — this only restores the
+     intended "known diagram -> its own definition, unknown -> fallback"
+     priority described by the Diagram Library's own design. */
+  if(typeof prevAnswer==="function"){
+    var rich=prevAnswer(q);
+    if(rich) return rich;
+  }
+  return answerSync(q);
 };
 D.answerAsync=answerAsync;
 D.netlistToSvg=netlistToSvg;
@@ -25339,7 +25358,7 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
     var result=null,d=null,svg="",title=forcedTitle||"Circuit Diagram";
     try{if(window.ElectroLabDiagrams&&typeof window.ElectroLabDiagrams.answer==='function'){result=window.ElectroLabDiagrams.answer(q);d=result&&result.diagram?result.diagram:null;if(d)window.__elabLastDiagram=d;}}catch(e){}
     try{if(!d&&window.ElectroLabDiagrams&&typeof window.ElectroLabDiagrams.draw==='function'){d=window.ElectroLabDiagrams.draw(q);if(d)window.__elabLastDiagram=d;}}catch(e){}
-    try{if(d&&typeof d.svg==='function'){svg=d.svg();title=d.title||title;}}catch(_){ }
+    try{if(d&&typeof d.svg==='function'){svg=d.svg();title=forcedTitle||d.title||title;}}catch(_){ }
     if(!svg){toast('Is diagram ka renderer available nahi hai. Try another diagram.');return false;}
     close('elab-v1022-diagram-view');
     var modal=document.createElement('div');modal.id='elab-v1022-diagram-view';
@@ -25811,7 +25830,7 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
         ["resistor",{x:240,y:60,r:470}],
         ["zener_diode",{x:440,y:220,zenerV:5.1}]
       ],
-      connections:[[0,"+ (Pos)",1,"T1"],[1,"T2",2,"Cathode (+)"],[2,"Anode (+)",0,"- (Gnd)"]]
+      connections:[[0,"+ (Pos)",1,"T1"],[1,"T2",2,"Cathode (-)"],[2,"Anode (+)",0,"- (Gnd)"]]
     },
     7805:{
       title:"7805 Regulator",
