@@ -2854,6 +2854,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
 .sa-vision-box .sv-hint{font-size:9px;color:#64748b;margin-top:4px}
 </style>
 
+<!-- ElectroLab v10.32 — Smart Assistant Quick-Action Cleanup -->
 </head>
 
 <div id="elab-v538-admin-gate" aria-hidden="true">
@@ -8462,9 +8463,9 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       // FIX: restore the quiz-content skeleton in case a completed
       // quiz replaced it with the "Quiz Completed!" summary markup.
       document.getElementById('quiz-content').innerHTML = `
-        <h4 id="quiz-question-dup2" class="text-sm font-semibold text-slate-200"></h4>
-        <div id="quiz-options-dup2" class="space-y-2"></div>
-        <div id="quiz-feedback-dup2" class="hidden p-3 rounded-lg text-xs font-mono"></div>
+        <h4 id="quiz-question" class="text-sm font-semibold text-slate-200"></h4>
+        <div id="quiz-options" class="space-y-2"></div>
+        <div id="quiz-feedback" class="hidden p-3 rounded-lg text-xs font-mono"></div>
       `;
       renderQuizQuestion();
     }
@@ -12497,6 +12498,31 @@ document.addEventListener("DOMContentLoaded",function(){
   function askAI(q){
     q = normalizeHinglish(q);
     if(!q) return "Kuch type karo — jaise “led nahi jal raha” ya “wire kaise banaye”.";
+    /* v10.36 FIX: Numerical routing bug.
+       ROOT CAUSE: ElectroLabDiagrams.answer() (called just below) uses broad
+       substring keyword matching in findLibrary() — the "ohm" keyword on the
+       verified "Ohm's Law" diagram entry matches ANY query containing the
+       substring "ohm", including the Numerical chip's query "ohm law
+       numerical". That caused the Diagram engine to answer first and return
+       "📐 Diagram — Ohm's Law" before the Study KB (which already has correct
+       numerical handling, see ElectroLabStudyKB.answer()) ever saw the query.
+       FIX: when the query expresses numerical intent AND the existing Study
+       KB engine actually has a matching answer for it, use that answer
+       directly and skip the Diagram engine entirely. If the Study KB has no
+       match, fall through unchanged to the existing logic below — nothing
+       else about Diagram/Ohm's Law/Quiz/Simulate is touched. */
+    try{
+      var qNum = String(q).toLowerCase();
+      if(/numerical|न्यूमेरिकल/.test(qNum) && window.ElectroLabStudyKB){
+        if(/^numerical$|numerical topics|numerical practice|topics numerical|^न्यूमेरिकल$/.test(qNum.trim()) && typeof ElectroLabStudyKB.numericalMenu==="function"){
+          return ElectroLabStudyKB.numericalMenu();
+        }
+        if(typeof ElectroLabStudyKB.answer==="function"){
+          var numAnswer = ElectroLabStudyKB.answer(q);
+          if(numAnswer) return numAnswer;
+        }
+      }
+    }catch(_){}
     /* Universal in-app schematic (library + canvas + text→draw) */
     try{
       window.__elabLastDiagram = null;
@@ -12572,13 +12598,27 @@ document.addEventListener("DOMContentLoaded",function(){
     {label:"Study Material", hi:"स्टडी मटेरियल", q:"basic electricity"},
     {label:"LED problem", hi:"LED समस्या", q:"led nahi jal raha"},
     {label:"Quiz start", hi:"क्विज़ शुरू", q:"ohm law quiz start"},
-    {label:"Numerical", hi:"न्यूमेरिकल", q:"ohm law numerical"},
+    {label:"Numerical", hi:"न्यूमेरिकल", q:"numerical topics"},
     {label:"Simulate", hi:"सिमुलेट", q:"simulate kaise"}
   ];
+  // v10.32 — UI-only quick-action cleanup.
+  // Keep the full CHIPS registry so the underlying Assistant actions remain
+  // available to the existing logic; only these five are rendered visibly.
+  var VISIBLE_QUICK_ACTIONS=new Set([
+    "led series diagram",
+    "ohm law",
+    "ohm law quiz start",
+    "numerical topics",
+    "simulate kaise"
+  ]);
   function renderChips(){
     var host=document.getElementById("elab-sa-chips");
     if(!host) return;
-    host.innerHTML=CHIPS.map(function(c){ var lab=(typeof currentLang!=="undefined"&&currentLang==="hi"&&c.hi)?c.hi:c.label; return '<button type="button" class="sa-chip" data-sa-q="'+c.q+'">'+lab+'</button>'; }).join("");
+    var visible=CHIPS.filter(function(c){return VISIBLE_QUICK_ACTIONS.has(String(c.q||"").trim().toLowerCase());});
+    host.innerHTML=visible.map(function(c){
+      var lab=(typeof currentLang!=="undefined"&&currentLang==="hi"&&c.hi)?c.hi:c.label;
+      return '<button type="button" class="sa-chip" data-sa-q="'+c.q+'">'+lab+'</button>';
+    }).join("");
   }
   function cardHtml(x){
     var cls=x.kind==="coach"?"sa-coach":x.kind==="path"?"sa-path":x.kind==="answer"?"sa-answer":"sa-tip";
@@ -12727,7 +12767,26 @@ document.addEventListener("DOMContentLoaded",function(){
       setTimeout(refreshEmptyState,80);
     };
   }
-  window.ElectroLabSmartAssistant={ open:openPanel, close:closePanel, ask:askAI, analyze:analyzeContext, isExplicitAdminLoginRequest:isExplicitAdminLoginRequest };
+  /* v10.34 — authoritative synchronous Assistant response path.
+     Quick actions that are meant to render learning content must not route
+     through the public open()/ask() pair, because that pair can re-enter the
+     panel lifecycle and makes content actions depend on unrelated UI state.
+     This method uses the existing answer engine + existing renderer exactly
+     once, with a visible error instead of a swallowed exception. */
+  function respond(question){
+    try{
+      var answer=askAI(question);
+      renderTips(answer);
+      return answer;
+    }catch(err){
+      console.error('ElectroLab Smart Assistant response:',err);
+      renderTips((typeof currentLang!=="undefined"&&currentLang==="hi")
+        ? 'इस मॉड्यूल को खोलने में समस्या हुई। कृपया दोबारा कोशिश करें।'
+        : 'Sorry, this module could not be opened. Please try again.');
+      return null;
+    }
+  }
+  window.ElectroLabSmartAssistant={ open:openPanel, close:closePanel, ask:askAI, respond:respond, analyze:analyzeContext, isExplicitAdminLoginRequest:isExplicitAdminLoginRequest };
 })();
 </script>
 
@@ -14369,29 +14428,44 @@ document.addEventListener("click", function(e){
 
 // Hook render path: inject confirm panel + PNG button when diagram shown
 var _lastObs = null;
+var _enhanceDiagramDomRunning = false; // v10.35 fix: re-entrancy guard
 function enhanceDiagramDom(){
+  if(_enhanceDiagramDomRunning) return; // v10.35 fix: prevent observer feedback loop
   var wrap = document.querySelector("#elab-smart-content .sa-diagram-wrap");
   if(!wrap) return;
   var d = window.__elabLastDiagram;
-  // PNG button
-  if(wrap && !wrap.querySelector("[data-sa-export-png]")){
-    var actions = wrap.querySelector(".sa-diagram-actions");
-    if(actions){
-      var b = document.createElement("button");
-      b.type = "button";
-      b.setAttribute("data-sa-export-png","1");
-      b.textContent = "Export PNG";
-      actions.appendChild(b);
+  var willMutate = (wrap && !wrap.querySelector("[data-sa-export-png]") && wrap.querySelector(".sa-diagram-actions"))
+    || (d && d.confirmParts && !document.getElementById("elab-diagram-confirm") && wrap.parentElement);
+  if(!willMutate) return; // v10.35 fix: nothing to change, skip touching the observer entirely
+  _enhanceDiagramDomRunning = true;
+  try{
+    // v10.35 fix: stop observing while we mutate the very subtree we watch,
+    // so our own PNG button / confirm panel insertion cannot re-trigger this observer.
+    if(typeof mo!=="undefined" && mo) mo.disconnect();
+    // PNG button
+    if(wrap && !wrap.querySelector("[data-sa-export-png]")){
+      var actions = wrap.querySelector(".sa-diagram-actions");
+      if(actions){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("data-sa-export-png","1");
+        b.textContent = "Export PNG";
+        actions.appendChild(b);
+      }
     }
-  }
-  // Confirm panel
-  if(d && d.confirmParts && !document.getElementById("elab-diagram-confirm")){
-    var card = wrap.parentElement;
-    if(card){
-      var div = document.createElement("div");
-      div.innerHTML = confirmHtml(d.confirmParts);
-      card.appendChild(div.firstChild);
+    // Confirm panel
+    if(d && d.confirmParts && !document.getElementById("elab-diagram-confirm")){
+      var card = wrap.parentElement;
+      if(card){
+        var div = document.createElement("div");
+        div.innerHTML = confirmHtml(d.confirmParts);
+        card.appendChild(div.firstChild);
+      }
     }
+  } finally {
+    var hostReattach = document.getElementById("elab-smart-content");
+    if(hostReattach && typeof mo!=="undefined" && mo) mo.observe(hostReattach, {childList:true, subtree:true});
+    _enhanceDiagramDomRunning = false;
   }
 }
 
@@ -15032,29 +15106,42 @@ D.version=(D.version||"")+"+p15";
 window.ElectroLabDiagrams=D;
 
 // Enhance DOM: validation list + vision box + badges
+var _enhanceRunning = false; // v10.35 fix: re-entrancy guard
 function enhance(){
+  if(_enhanceRunning) return; // v10.35 fix: prevent observer feedback loop
   var wrap=document.querySelector("#elab-smart-content .sa-diagram-wrap");
   if(!wrap) return;
   var d=window.__elabLastDiagram;
-  if(d&&d.validation&&!wrap.querySelector(".sa-diagram-validate")){
-    var div=document.createElement("div");
-    div.innerHTML=validationHtml(d.validation);
-    wrap.appendChild(div.firstChild);
-  }
-  // badge class fix for review/ai
-  var badge=document.querySelector("#elab-smart-content .sa-diagram-badge");
-  if(badge&&d&&d.trust){
-    badge.classList.remove("verified","canvas","sketch","review","ai");
-    badge.classList.add(d.trust==="verified"?"verified":d.trust==="canvas"?"canvas":d.trust==="ai"?"ai":d.trust==="review"?"review":"sketch");
-    badge.textContent=badgeLabel(d.trust);
-  }
-  if(!document.getElementById("elab-vision-box")){
-    var card=wrap.parentElement;
-    if(card){
-      var vb=document.createElement("div");
-      vb.innerHTML=visionBoxHtml();
-      card.appendChild(vb.firstChild);
+  _enhanceRunning = true;
+  try{
+    // v10.35 fix: stop observing while we mutate the very subtree we watch,
+    // so our own inserted nodes / class changes cannot re-trigger this observer
+    // (which was ping-ponging forever against the sibling enhanceDiagramDom() observer).
+    if(typeof mo!=="undefined" && mo) mo.disconnect();
+    if(d&&d.validation&&!wrap.querySelector(".sa-diagram-validate")){
+      var div=document.createElement("div");
+      div.innerHTML=validationHtml(d.validation);
+      wrap.appendChild(div.firstChild);
     }
+    // badge class fix for review/ai
+    var badge=document.querySelector("#elab-smart-content .sa-diagram-badge");
+    if(badge&&d&&d.trust){
+      badge.classList.remove("verified","canvas","sketch","review","ai");
+      badge.classList.add(d.trust==="verified"?"verified":d.trust==="canvas"?"canvas":d.trust==="ai"?"ai":d.trust==="review"?"review":"sketch");
+      badge.textContent=badgeLabel(d.trust);
+    }
+    if(!document.getElementById("elab-vision-box")){
+      var card=wrap.parentElement;
+      if(card){
+        var vb=document.createElement("div");
+        vb.innerHTML=visionBoxHtml();
+        card.appendChild(vb.firstChild);
+      }
+    }
+  } finally {
+    var hostReattach=document.getElementById("elab-smart-content");
+    if(hostReattach && typeof mo!=="undefined" && mo) mo.observe(hostReattach,{childList:true,subtree:true});
+    _enhanceRunning = false;
   }
 }
 document.addEventListener("change", function(e){
@@ -19716,6 +19803,21 @@ function listTopics(){
   return (h?"📚 उपलब्ध स्टडी टॉपिक्स:\n":"📚 Study topics:\n")+titles.join("\n")+
     (h?"\n\nकोई टॉपिक नाम लिखो, जैसे “ohm law” या “DOL starter”。":"\n\nType a topic name, e.g. “ohm law” or “DOL starter”.");
 }
+/* v10.36: Numerical topic menu — reuses existing EXTRA_NUM data and DATA.topics
+   titles only; no new numerical content/engine is created. */
+function numericalMenu(){
+  var ids=["ohms_law","series_parallel","transformers","rlc","diodes_led"];
+  var titles={};
+  (DATA.topics||[]).forEach(function(t){ titles[t.id]=t.title; });
+  var h=hi();
+  var lines=ids.filter(function(id){ return !!EXTRA_NUM[id]; }).map(function(id,i){
+    return (i+1)+". "+(titles[id]||id);
+  });
+  return (h?"🔢 न्यूमेरिकल प्रैक्टिस\n\n":"🔢 NUMERICAL PRACTICE\n\n")+
+    (h?"टॉपिक चुनो:\n":"Choose a topic:\n")+lines.join("\n")+
+    "\n\n"+(h?"टॉपिक नाम + “numerical” टाइप करो, जैसे “ohm law numerical” या “series numerical”।":
+      "Type a topic name + “numerical”, e.g. “ohm law numerical” or “series numerical”.");
+}
 function answer(q){
   if(!q||!String(q).trim()) return null;
   var checked=checkQuizAnswer(q); if(checked) return checked;
@@ -19747,6 +19849,7 @@ window.ElectroLabStudyKB={
   find:find,
   getScores:readScores,
   listTopics:listTopics,
+  numericalMenu:numericalMenu,
   dataVersion:(DATA&&DATA.version)||null
 };
 })();
@@ -25206,7 +25309,29 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
   function escapeHtml(s){return String(s||"").replace(/[&<>\"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;"}[c]||c;});}
   function close(id){var x=document.getElementById(id);if(x)x.remove();}
   function getInput(){return document.getElementById("elab-sa-input");}
-  function runAssistant(q){var a=null;try{if(window.ElectroLabSmartAssistant&&typeof window.ElectroLabSmartAssistant.ask==='function')a=window.ElectroLabSmartAssistant.ask(q);}catch(e){}try{if(window.ElectroLabSmartAssistant&&typeof window.ElectroLabSmartAssistant.open==='function')window.ElectroLabSmartAssistant.open(a||"No response returned.");}catch(e){}return a;}
+  function runAssistant(q){
+    try{
+      var api=window.ElectroLabSmartAssistant;
+      if(api&&typeof api.respond==='function'){
+        var panel=document.getElementById('elab-smart-panel');
+        if(panel&&!panel.classList.contains('open')&&typeof api.open==='function') api.open();
+        return api.respond(q);
+      }
+      if(api&&typeof api.ask==='function'){
+        var a=api.ask(q);
+        if(typeof api.open==='function') api.open(a||"No response returned.");
+        return a;
+      }
+      throw new Error('Smart Assistant API unavailable');
+    }catch(err){
+      console.error('ElectroLab Quick Action response:',err);
+      try{
+        var c=document.getElementById('elab-smart-content');
+        if(c)c.innerHTML='<div class="sa-answer"><b>Assistant error</b><br>Sorry, this module could not be opened. Please try again.</div>';
+      }catch(_){ }
+      return null;
+    }
+  }
   function goBuilder(){try{if(typeof window.showSection==='function')window.showSection('builder');}catch(_){ } }
   function goIndustrial(){try{if(typeof window.showSection==='function')window.showSection('industrial');}catch(_){ } }
   function goSimulate(){goBuilder();setTimeout(function(){var ids=['elab-v545-simulate','elab-v544-simulate-wrap','simulate','simulator'];var t=null;for(var i=0;i<ids.length;i++){t=document.getElementById(ids[i]);if(t)break;}if(t&&t.scrollIntoView)t.scrollIntoView({behavior:'smooth',block:'center'});else toast('Builder opened. Use Simulate there.');},180);}
@@ -25278,15 +25403,75 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
     renderBuiltins('');renderCustom();modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
   }
   function runChip(chip){
-    if(opening)return;opening=true;try{
-      var q=String(chip.getAttribute('data-sa-q')||'').trim();var label=String(chip.textContent||'').trim().toLowerCase();
-      if(label.indexOf('diagram')>=0){openGallery(true);return;}
-      if(label.indexOf('my circuit')>=0){goBuilder();runAssistant('current circuit diagram');return;}
-      if(label.indexOf('star-delta')>=0||/star delta/i.test(q)){goIndustrial();return;}
-      if(label.indexOf('dol')>=0){goIndustrial();return;}
-      if(label.indexOf('simulate')>=0){goSimulate();return;}
-      var inp=getInput();if(inp){inp.value=q;inp.dispatchEvent(new Event('input',{bubbles:true}));}runAssistant(q);
-    }finally{setTimeout(function(){opening=false;},160);}
+    if(opening)return;
+    opening=true;
+    try{
+      var q=String(chip.getAttribute('data-sa-q')||'').trim();
+      var label=String(chip.textContent||'').trim().toLowerCase();
+
+      /* One authoritative quick-action router. The visible five actions are
+         routed directly to the existing ElectroLab feature engines; no
+         second click listener or duplicate feature implementation is used. */
+      if(label.indexOf('diagram')>=0){
+        openGallery(true);
+        return;
+      }
+
+      if(label.indexOf("ohm's law")>=0 || /^ohm\s*law$/i.test(q)){
+        runAssistant('ohm law');
+        return;
+      }
+
+      if(label.indexOf('quiz')>=0 || /quiz\s*start/i.test(q)){
+        /* Use the existing full Quiz UI/engine, not the text-only Assistant
+           quiz state. Reset only the existing quiz session and render its
+           first question. */
+        try{
+          if(typeof window.showSection==='function') window.showSection('quiz');
+          if(typeof window.currentQuizIndex!=='undefined') window.currentQuizIndex=0;
+          if(typeof window.quizScore!=='undefined') window.quizScore=0;
+          if(typeof window.renderQuizQuestion==='function') window.renderQuizQuestion();
+          else if(typeof window.startQuiz==='function') window.startQuiz();
+          else throw new Error('Quiz engine is unavailable');
+        }catch(err){
+          console.error('ElectroLab Quick Action — Quiz:',err);
+          runAssistant('quiz start');
+        }
+        return;
+      }
+
+      if(label.indexOf('numerical')>=0 || /numerical/i.test(q)){
+        runAssistant('ohm law numerical');
+        return;
+      }
+
+      if(label.indexOf('simulate')>=0 || /simulate/i.test(q)){
+        try{
+          if(typeof window.showSection==='function') window.showSection('builder');
+          var state=window.ElectroLabBuilderState;
+          var hasCircuit=!!(state && Array.isArray(state.components) && state.components.length);
+          if(typeof window.runBuilderSim==='function' && hasCircuit){
+            window.runBuilderSim();
+          }else if(hasCircuit && typeof window.runBuilderSimulation==='function'){
+            window.runBuilderSimulation();
+          }else{
+            runAssistant('simulate circuit');
+          }
+        }catch(err){
+          console.error('ElectroLab Quick Action — Simulate:',err);
+          runAssistant('simulate circuit');
+        }
+        return;
+      }
+
+      /* Defensive fallback for a future visible action. */
+      runAssistant(q);
+    }catch(err){
+      console.error('ElectroLab Quick Action:',err);
+      runAssistant('help');
+    }finally{
+      opening=false;
+    }
   }
   /* Replace the v10.21 delegated router so this version remains the single click authority. */
   function capture(e){var chip=e.target&&e.target.closest?e.target.closest('#elab-sa-chips [data-sa-q]'):null;if(!chip)return;if(e.defaultPrevented)return;e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();e.stopPropagation();runChip(chip);}
