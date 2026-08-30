@@ -3,6 +3,7 @@
 
 <html lang="en">
 <head>
+<meta charset="utf-8"/>
 <!-- ===== ElectroLab v6.4 Security Audit & Regression Layer ===== -->
 <script id="elab-v64-security-audit">
 (() => {
@@ -315,7 +316,6 @@
   }));
 })();
 </script>
-<meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
 <style id="elab-dialog-core-style">
     .elab-dialog-backdrop{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -509,6 +509,12 @@
 #elab-v544-simulate-wrap{display:block;width:100%}
 #elab-v544-simulate-wrap button{width:100%;min-height:52px}
 
+/* v11 hardening, Phase 3 — visible keyboard focus state for placed Builder components */
+.canvas-comp-card:focus-visible{
+  outline:2px solid #22d3ee!important;
+  outline-offset:2px;
+  box-shadow:0 0 0 4px rgba(34,211,238,.25);
+}
 /* v5.55 — visible wire layer */
 #builder-canvas{position:relative}
 #builder-wire-svg{
@@ -578,7 +584,7 @@
   }
 }
 </style>
-<meta content="6.10" name="electrolab-version"/>
+<meta content="11.0" name="electrolab-version"/>
 <style id="elab-v575-layout-bugfix">
 /* v5.75 bugfix: floating status must not cover Learning Lab controls on small screens. */
 #elab-status-pill, #elab-floating-status, .elab-status-pill, [data-elab-status-pill]{
@@ -2626,37 +2632,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
   #elab-scope-panel #scope-wave-readout{width:100%;margin-left:0}
 }
 </style>
-<style id="elab-v538-admin-gate-style">
-#elab-v538-admin-gate{
-  display:none;position:fixed;inset:0;z-index:2147483000;
-  align-items:center;justify-content:center;padding:18px;
-  background:rgba(2,6,23,.88);backdrop-filter:blur(14px);
-}
-#elab-v538-admin-gate.open{display:flex}
-#elab-v538-admin-card{
-  width:min(430px,100%);padding:22px;border-radius:18px;
-  background:#0f172a;color:#e2e8f0;border:1px solid rgba(34,211,238,.28);
-  box-shadow:0 24px 90px rgba(0,0,0,.6);font-family:system-ui,sans-serif;
-}
-#elab-v538-admin-card input{
-  width:100%;box-sizing:border-box;margin:9px 0;padding:11px;
-  border-radius:10px;border:1px solid #334155;background:#020617;
-  color:#e2e8f0;outline:none;
-}
-#elab-v538-admin-card button{
-  padding:9px 13px;border-radius:10px;border:1px solid rgba(34,211,238,.25);
-  background:#082f49;color:#e0f2fe;cursor:pointer;
-}
-#elab-v538-admin-msg{min-height:18px;margin-top:9px;font-size:12px;color:#94a3b8}
-</style>
-<style id="elab-v540-recovery-style">
-#elab-v540-recovery{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #1e293b}
-#elab-v540-recovery.open{display:block}
-#elab-v540-recovery input{width:100%;box-sizing:border-box;margin:7px 0;padding:10px;
- border-radius:9px;border:1px solid #334155;background:#020617;color:#e2e8f0}
-#elab-v540-recovery button{padding:8px 11px;border-radius:9px;border:1px solid #334155;
- background:#0f172a;color:#cbd5e1;cursor:pointer}
-</style>
+<!-- ElectroLab v5.38/v5.40 admin-gate modal + password-recovery UI removed 2026: confirmed
+     unreachable dead code (nothing ever added .open; Login/Cancel buttons had no listeners;
+     a separate static-host lock script additionally force-disabled it). The working,
+     assistant-triggered admin-login implementation (elab-v91-admin-login) is unaffected
+     and unchanged. See NIL_SparkLab_v11_Hardening_Report.md, Phase 2. -->
 <style id="elab-builder-chips-style">
 .elab-builder-chips{
   display:flex;
@@ -2778,34 +2758,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
 </style>
 <!-- ElectroLab v10.32 — Smart Assistant Quick-Action Cleanup -->
 </head>
-<div aria-hidden="true" id="elab-v538-admin-gate">
-<div aria-labelledby="elab-v538-admin-title" aria-modal="true" id="elab-v538-admin-card" role="dialog">
-<h2 id="elab-v538-admin-title" style="margin:0 0 6px">Admin Login</h2>
-<div style="font-size:12px;color:#94a3b8">
-      Admin access only. Authentication is verified by the server.
-    </div>
-<input aria-label="Admin ID" autocomplete="username" id="elab-v538-admin-id" placeholder="Admin ID" type="text"/>
-<input aria-label="Password" autocomplete="current-password" id="elab-v538-admin-password" placeholder="Password" type="password"/>
-<div style="display:flex;gap:8px;margin-top:5px">
-<button id="elab-v538-admin-login" type="button">Login</button>
-<button id="elab-v538-admin-cancel" type="button">Cancel</button>
-</div>
-<div aria-live="polite" id="elab-v538-admin-msg"></div>
-<button id="elab-v540-forgot" style="margin-top:7px;background:transparent;border:0;color:#67e8f9;padding-left:0" type="button">
-      Forgot password?
-    </button>
-<div aria-hidden="true" id="elab-v540-recovery" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #1e293b">
-<div style="font-size:12px;color:#94a3b8;margin-bottom:5px">Recovery: use your recovery phrase or recovery email.</div>
-<input aria-label="Recovery phrase" autocomplete="off" id="elab-v540-recovery-phrase" placeholder="Recovery phrase" type="password"/>
-<input aria-label="Recovery email" autocomplete="email" id="elab-v540-recovery-email" placeholder="Recovery email" type="email"/>
-<div style="display:flex;gap:7px">
-<button id="elab-v540-recovery-continue" type="button">Continue</button>
-<button id="elab-v540-recovery-cancel" type="button">Cancel</button>
-</div>
-</div>
-</div>
-</div>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black" data-electrolab-version="6.10">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black" data-nil-sparklab-version="11.0">
 <div aria-hidden="true" class="hidden fixed z-[80] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,460px)] max-h-[80vh] overflow-auto rounded-2xl border border-cyan-500/30 bg-slate-950/95 shadow-2xl p-4" id="elab-v543-property-panel">
 <div class="flex items-center justify-between gap-2">
 <div>
@@ -2824,7 +2777,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
 </div>
 <div>
 <span class="text-lg font-black tracking-tight text-white flex items-center gap-2">
-            NIL SparkLab <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded">v6.10</span>
+            NIL SparkLab
 </span>
 <p class="text-[10px] text-slate-400 font-medium" data-i18n="tagline">Learn • Build • Simulate • Troubleshoot</p>
 </div>
@@ -3190,10 +3143,10 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
 <div class="border-t border-slate-800 pt-3">
 <h4 class="text-xs font-bold text-slate-300 uppercase font-mono mb-2">Wire Color</h4>
 <div class="flex items-center gap-2" id="wire-color-picker">
-<button class="w-6 h-6 rounded-full bg-cyan-400 border-2 border-white ring-2 ring-cyan-500/50" data-color="#22d3ee" onclick="setWireColor('#22d3ee', event)"></button>
-<button class="w-6 h-6 rounded-full bg-rose-500 border-2 border-transparent" data-color="#ef4444" onclick="setWireColor('#ef4444', event)" title="Positive / VCC"></button>
-<button class="w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent" data-color="#334155" onclick="setWireColor('#334155', event)" title="Ground / Return"></button>
-<button class="w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent" data-color="#eab308" onclick="setWireColor('#eab308', event)" title="Signal Line"></button>
+<button class="w-6 h-6 rounded-full bg-cyan-400 border-2 border-white ring-2 ring-cyan-500/50" data-color="#22d3ee" onclick="setWireColor('#22d3ee', event)" aria-label="Set wire color to default cyan" title="Default"></button>
+<button class="w-6 h-6 rounded-full bg-rose-500 border-2 border-transparent" data-color="#ef4444" onclick="setWireColor('#ef4444', event)" aria-label="Set wire color to red (Positive / VCC)" title="Positive / VCC"></button>
+<button class="w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent" data-color="#334155" onclick="setWireColor('#334155', event)" aria-label="Set wire color to dark gray (Ground / Return)" title="Ground / Return"></button>
+<button class="w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent" data-color="#eab308" onclick="setWireColor('#eab308', event)" aria-label="Set wire color to amber (Signal Line)" title="Signal Line"></button>
 </div>
 </div>
 <div class="border-t border-slate-800 pt-3 space-y-2">
@@ -4448,6 +4401,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
     function setLanguage(lang) {
       currentLang = lang;
       SafeStore.set('electrolab_lang', lang);
+      document.documentElement.setAttribute('lang', lang === 'hi' ? 'hi' : 'en');
       document.getElementById('lang-btn-text').innerText = lang === 'en' ? 'EN | हिंदी' : 'हिंदी | EN';
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -5635,6 +5589,11 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         div.style.width = "178px";
         div.style.height = "106px";
         div.style.transform = `rotate(${c.rotation || 0}deg)`;
+        // Keyboard accessibility (v11 hardening, Phase 3): make each placed component
+        // reachable/operable via keyboard, in addition to the existing mouse/touch drag.
+        div.tabIndex = 0;
+        div.setAttribute('role', 'group');
+        div.setAttribute('data-elab-kbd-movable', 'true');
 
         let valLabel = '';
         if (c.type === 'resistor') valLabel = `${c.r}Ω`;
@@ -5664,6 +5623,8 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         if (c.type === 'mcb') valLabel = c.tripped ? 'TRIPPED' : 'READY';
         if (c.type === 'olr') valLabel = c.tripped ? 'TRIPPED' : 'READY';
         if (c.type === 'mov_varistor') valLabel = 'SURGE CLAMP';
+
+        div.setAttribute('aria-label', `${c.name}${valLabel ? ', ' + valLabel : ''}. Use arrow keys to move, R to rotate, Delete to remove.`);
 
         let visualResponse = `<div class="el-v514-stage el-integrated-component-stage relative" style="width:178px;height:86px;">${componentVisualSvg(c)}`;
         const layout = getVisualTerminalLayout(c);
@@ -5719,6 +5680,40 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
         cancelWireSelection();
         const st = document.getElementById('builder-status-text');
         if (st) st.innerText = 'Wire selection cancelled.';
+      }
+    });
+
+    // v11 hardening, Phase 3: minimal keyboard-operable path for the Circuit Builder
+    // canvas. Additive only — existing mouse/touch drag (makeDraggableMobile) and all
+    // terminal-click wiring are unchanged. Tab reaches a placed component (tabIndex
+    // set in renderBuilderCanvas); arrow keys nudge it; R rotates it; Delete/Backspace
+    // removes it. Wire terminals were already real <button> elements and were already
+    // natively keyboard-operable (Tab + Enter/Space); this does not change them.
+    document.addEventListener('keydown', (e) => {
+      const el = document.activeElement;
+      if (!el || el.getAttribute('data-elab-kbd-movable') !== 'true') return;
+      const id = el.id;
+      const comp = (typeof builderCanvasComps !== 'undefined') ? builderCanvasComps.find(c => c.id === id) : null;
+      if (!comp) return;
+
+      const step = e.shiftKey ? 30 : 10;
+      let handled = true;
+      if (e.key === 'ArrowLeft') comp.x = Math.max(0, (comp.x || 0) - step);
+      else if (e.key === 'ArrowRight') comp.x = (comp.x || 0) + step;
+      else if (e.key === 'ArrowUp') comp.y = Math.max(0, (comp.y || 0) - step);
+      else if (e.key === 'ArrowDown') comp.y = (comp.y || 0) + step;
+      else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); rotateComponent(id, null); return; }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeBuilderComp(id); return; }
+      else handled = false;
+
+      if (handled) {
+        e.preventDefault();
+        renderBuilderCanvas();
+        // renderBuilderCanvas() rebuilds every card element, so restore keyboard focus
+        // to the same component instead of silently losing it to the document body.
+        const restored = document.getElementById(id);
+        if (restored) restored.focus();
+        if (isSimRunning) runBuilderSim();
       }
     });
 
@@ -7183,7 +7178,7 @@ max-width:0!important;max-height:0!important;overflow:hidden!important;
       ctx.fillRect(0, 0, rect.width, rect.height);
       ctx.font = 'bold 12px monospace';
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText('NIL SparkLab v5.62 — Circuit Schematic', 14, 20);
+      ctx.fillText('NIL SparkLab — Circuit Schematic', 14, 20);
 
       builderWires.forEach(w => {
         const p1 = getTerminalCenter(w.from.compId, w.from.term), p2 = getTerminalCenter(w.to.compId, w.to.term);
@@ -11487,7 +11482,7 @@ window.ElectroLabFinalAudit={
 document.addEventListener("DOMContentLoaded",function(){
   refreshStatus();
   var a=window.ElectroLabFinalAudit.run();
-  if(a.passed===a.total)toast("NIL SparkLab v5.77 — Final systems ready");
+  if(a.passed===a.total)toast("NIL SparkLab — Final systems ready");
   else toast("Final build loaded · "+a.passed+"/"+a.total+" modules detected");
 });
 })();
@@ -12413,7 +12408,7 @@ document.addEventListener("DOMContentLoaded",function(){
 })();
 </script>
 <!-- ===== ElectroLab v6.3 Priority-1 Security Hardening ===== -->
-<meta content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'self'; img-src 'self' https://api.qrserver.com data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; connect-src 'self' https:; media-src 'self' https: blob:; worker-src 'self' blob:; upgrade-insecure-requests" http-equiv="Content-Security-Policy"/>
+<meta content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'self'; img-src 'self' https://api.qrserver.com data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https:; media-src 'self' https: blob:; worker-src 'self' blob:; upgrade-insecure-requests" http-equiv="Content-Security-Policy"/>
 <script id="elab-v610-priority1-security">(function(){
 'use strict';
 const S=window.ElectroLabSecurityState=window.ElectroLabSecurityState||{blocked:0,lastIssue:null,startedAt:Date.now()};
@@ -13161,9 +13156,7 @@ window.ElectroLabSecurityClone=function(value){return clean(value,0);};
     if(!w) return;
     var body=document.getElementById("elab-report-body").textContent;
     var safeBody = body.replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    w.document.write("<html><head><title>NIL SparkLab Report</title></head><body style='font-family:monospace;white-space:pre-wrap;padding:24px'>" + safeBody + "
-
-</body></html>");
+    w.document.write("<html><head><title>NIL SparkLab Report</title></head><body style='font-family:monospace;white-space:pre-wrap;padding:24px'>" + safeBody + "\n\n</body></html>");
     w.document.close();
   });
 })();
@@ -14833,7 +14826,7 @@ else boot();
   }
   function lockAdmin(){
     if(!isStaticHost()) return;
-    var ids = ["elab-v538-admin-card","elab-v540-recovery","elab-v540-reset","elab-v538-admin-id"];
+    var ids = []; // elab-v538/v540 admin-gate elements removed 2026 (were confirmed dead/unreachable); fetch-interception below is unaffected and still protects any /api/admin/ call
     ids.forEach(function(id){
       var el = document.getElementById(id);
       if(!el) return;
@@ -14871,7 +14864,7 @@ else boot();
 #elab-sec-badge.bad{border-color:rgba(248,113,113,.5);color:#fca5a5}
 #elab-sec-badge.ok{border-color:rgba(52,211,153,.45);color:#6ee7b7}
 </style>
-<div id="elab-sec-badge" role="status" title="Security self-check">Security v6.10 · checking…</div>
+<div id="elab-sec-badge" role="status" title="Security self-check">Security v11.0 · checking…</div>
 <script id="elab-p6-sec-badge">
 (function(){
   "use strict";
@@ -15620,7 +15613,7 @@ else boot();
 <div aria-hidden="true" id="elab-v86-security-dashboard">
 <div aria-labelledby="elab-v86-title" aria-modal="true" id="elab-v86-security-card" role="dialog">
 <h2 id="elab-v86-title" style="margin:0">Owner Security Dashboard</h2>
-<div style="font-size:12px;opacity:.7">NIL SparkLab v8.6 • private security health view</div>
+<div style="font-size:12px;opacity:.7">NIL SparkLab v11.0 • private security health view</div>
 <div class="elab-v86-statgrid">
 <div class="elab-v86-stat">Security score<strong id="elab-v86-score">—</strong></div>
 <div class="elab-v86-stat">Passed<strong id="elab-v86-passed">—</strong></div>
@@ -17175,7 +17168,7 @@ if(!panel || document.getElementById("elab-v1pro-security")) return;
 const box=document.createElement("section");
 box.id="elab-v1pro-security";
 box.innerHTML=`
-<strong>NIL SparkLab v1 PRO — Security Foundation</strong>
+<strong>NIL SparkLab v11.0 — Security Foundation</strong>
 <div style="font-size:11px;opacity:.68;margin-top:3px">Consolidated owner view • architecture → implementation gate</div>
 <div class="elab-v1pro-grid" id="elab-v1pro-grid"></div>
 <div class="elab-v1pro-note">
@@ -17939,7 +17932,7 @@ items.forEach(x=>{
 </input></div></div>
 <div id="elab-cam-panel"><div class="elab-modal-card">
 <h3>📷 Circuit from photo</h3>
-<p>Photo upload karo, neeche components Hinglish mein likho (ya auto-suggest edit karo), phir Build.</p>
+<p>Photo is for your own reference only — it is not analyzed. Type the components below (Hinglish is fine, or edit the auto-suggestion), then tap Build.</p>
 <input accept="image/*" capture="environment" id="elab-cam-file" type="file">
 <div id="elab-cam-preview" style="margin:8px 0;text-align:center"></div>
 <textarea id="elab-cam-desc" placeholder="battery, resistor 470, LED series" rows="3"></textarea>
@@ -18231,7 +18224,7 @@ items.forEach(x=>{
     prev.innerHTML="";
     if(!f) return;
     var url=URL.createObjectURL(f);
-    prev.innerHTML='<img src="'+url+'" style="max-width:100%;max-height:180px;border-radius:10px"/>';
+    prev.innerHTML='<img src="'+url+'" alt="Preview of the uploaded circuit photo" style="max-width:100%;max-height:180px;border-radius:10px"/>';
     if(!document.getElementById("elab-cam-desc").value){
       document.getElementById("elab-cam-desc").value = "battery, resistor 470, LED series";
     }
@@ -18855,49 +18848,8 @@ items.forEach(x=>{
   }
 })();
 </script>
-<script id="elab-v540-recovery-engine">
-(function(){
-"use strict";
-function msg(t){const e=document.getElementById("elab-v538-admin-msg");if(e)e.textContent=t;}
-async function openReset(){
- try{
-  const r=await fetch("/api/admin/auth/recovery/session",{credentials:"include",cache:"no-store"});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok||d.recoveryActive!==true){msg("Recovery verification required.");return;}
-  const card=document.getElementById("elab-v538-admin-card");if(!card)return;
-  let box=document.getElementById("elab-v540-reset");
-  if(!box){
-   box=document.createElement("div");box.id="elab-v540-reset";box.style.cssText="margin-top:12px;padding-top:12px;border-top:1px solid #1e293b";
-   box.innerHTML='<input id="elab-v540-new-password" type="password" autocomplete="new-password" placeholder="New password" style="width:100%;box-sizing:border-box;margin:6px 0;padding:10px;border-radius:9px;border:1px solid #334155;background:#020617;color:#e2e8f0"><input id="elab-v540-new-password2" type="password" autocomplete="new-password" placeholder="Confirm password" style="width:100%;box-sizing:border-box;margin:6px 0;padding:10px;border-radius:9px;border:1px solid #334155;background:#020617;color:#e2e8f0"><button type="button" id="elab-v540-reset-btn">Set new password</button>';
-   card.appendChild(box);
-   document.getElementById("elab-v540-reset-btn").addEventListener("click",async()=>{
-    const a=document.getElementById("elab-v540-new-password").value,b=document.getElementById("elab-v540-new-password2").value;
-    if(a.length<12||a!==b){msg("Password must match and be at least 12 characters.");return;}
-    const r2=await fetch("/api/admin/auth/reset-password",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({newPassword:a})});
-    const d2=await r2.json().catch(()=>({}));
-    if(r2.ok&&d2.passwordReset===true){msg("Password changed successfully.");document.getElementById("elab-v540-new-password").value="";document.getElementById("elab-v540-new-password2").value="";}else msg("Password reset failed.");
-   });
-  }
- }catch(e){msg("Recovery service unavailable.");}
-}
-async function recover(){
- const p=(document.getElementById("elab-v540-recovery-phrase")?.value||"").trim().toLowerCase();
- const e=(document.getElementById("elab-v540-recovery-email")?.value||"").trim();
- if(!p&&!e){msg("Enter the recovery phrase or recovery email.");return;}
- msg("Verifying recovery…");
- try{
-  const r=await fetch("/api/admin/auth/recover",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminId:(document.getElementById("elab-v538-admin-id")?.value||"admin593").trim(),recoveryPhrase:p||null,recoveryEmail:e||null})});
-  const d=await r.json().catch(()=>({}));
-  if(r.ok&&d.recoveryStarted===true){msg("Recovery verified. Create a new password.");openReset();}else msg("Recovery verification failed.");
- }catch(e2){msg("Recovery service unavailable.");}
-}
-document.addEventListener("DOMContentLoaded",()=>{
- document.getElementById("elab-v540-forgot")?.addEventListener("click",()=>{const b=document.getElementById("elab-v540-recovery");if(b)b.style.display="block";});
- document.getElementById("elab-v540-recovery-cancel")?.addEventListener("click",()=>{const b=document.getElementById("elab-v540-recovery");if(b)b.style.display="none";});
- document.getElementById("elab-v540-recovery-continue")?.addEventListener("click",recover);
-});
-})();
-</script>
+<!-- elab-v540-recovery-engine removed 2026: supported only the now-removed elab-v538
+     admin-gate modal (password recovery UI), which was confirmed unreachable. -->
 <!-- ================================================================
      ElectroLab v6.7 — Unified Engineering Upgrade
      1 Architecture cleanup / diagnostics
@@ -19045,7 +18997,7 @@ window.ElectroLabCircuitTeacherV67=Object.freeze({snapshot:circuitSnapshot,promp
 function mount(){
  if(id('elab-v67-tools'))return;
  const root=document.createElement('div');root.id='elab-v67-tools';
- root.innerHTML=`<button id="elab-v67-launch" type="button">⚡ Engineering Tools</button><div id="elab-v67-panel" aria-hidden="true"><div class="elab-v67-card"><div class="elab-v67-head"><div><b style="font-size:16px">NIL SparkLab v6.7 Engineering Upgrade</b><div style="font-size:10px;color:#64748b;margin-top:3px">Unified architecture • analysis • scope • physics • AI bridge</div></div><button class="elab-v67-close" id="elab-v67-close">Close</button></div><div class="elab-v67-grid" id="elab-v67-status"></div><div style="margin-top:14px"><b style="font-size:12px">Oscilloscope CH1</b><canvas id="elab-v67-scope"></canvas><div class="elab-v67-controls"><label>V/div <input id="elab-v67-vdiv" type="number" min="0.1" step="0.1" value="5"></label><label>ms/div <input id="elab-v67-tdiv" type="number" min="1" step="1" value="20"></label><button class="elab-v67-close" id="elab-v67-scope-run">Run/Stop</button></div><div id="elab-v67-scope-readout" class="elab-v67-note">Scope idle</div></div><div style="margin-top:14px"><b style="font-size:12px">RLC / Transient Analyzer</b><div class="elab-v67-controls"><label>R Ω <input id="elab-v67-r" type="number" step="0.1" value="470"></label><label>L mH <input id="elab-v67-l" type="number" step="0.1" value="10"></label><label>C µF <input id="elab-v67-c" type="number" step="0.1" value="100"></label><label>f Hz <input id="elab-v67-f" type="number" step="0.1" value="50"></label><button class="elab-v67-close" id="elab-v67-analyze">Analyze</button></div><div id="elab-v67-analysis-result" class="elab-v67-note">Enter values and analyze.</div></div><div style="margin-top:14px"><b style="font-size:12px">AI Circuit Teacher</b><div class="elab-v67-controls"><button class="elab-v67-close" id="elab-v67-explain">Explain this circuit</button></div><div id="elab-v67-ai-result" class="elab-v67-note">Uses the current Builder snapshot and the existing Assistant when available.</div></div><div class="elab-v67-note">The analyzer uses the existing Builder state. Advanced component models are explicit APIs; unsupported circuit topologies are not silently guessed. Admin privileges remain server-authoritative.</div></div></div>`;
+ root.innerHTML=`<button id="elab-v67-launch" type="button">⚡ Engineering Tools</button><div id="elab-v67-panel" aria-hidden="true"><div class="elab-v67-card"><div class="elab-v67-head"><div><b style="font-size:16px">NIL SparkLab v11.0 Engineering Upgrade</b><div style="font-size:10px;color:#64748b;margin-top:3px">Unified architecture • analysis • scope • physics • AI bridge</div></div><button class="elab-v67-close" id="elab-v67-close">Close</button></div><div class="elab-v67-grid" id="elab-v67-status"></div><div style="margin-top:14px"><b style="font-size:12px">Oscilloscope CH1</b><canvas id="elab-v67-scope"></canvas><div class="elab-v67-controls"><label>V/div <input id="elab-v67-vdiv" type="number" min="0.1" step="0.1" value="5"></label><label>ms/div <input id="elab-v67-tdiv" type="number" min="1" step="1" value="20"></label><button class="elab-v67-close" id="elab-v67-scope-run">Run/Stop</button></div><div id="elab-v67-scope-readout" class="elab-v67-note">Scope idle</div></div><div style="margin-top:14px"><b style="font-size:12px">RLC / Transient Analyzer</b><div class="elab-v67-controls"><label>R Ω <input id="elab-v67-r" type="number" step="0.1" value="470"></label><label>L mH <input id="elab-v67-l" type="number" step="0.1" value="10"></label><label>C µF <input id="elab-v67-c" type="number" step="0.1" value="100"></label><label>f Hz <input id="elab-v67-f" type="number" step="0.1" value="50"></label><button class="elab-v67-close" id="elab-v67-analyze">Analyze</button></div><div id="elab-v67-analysis-result" class="elab-v67-note">Enter values and analyze.</div></div><div style="margin-top:14px"><b style="font-size:12px">AI Circuit Teacher</b><div class="elab-v67-controls"><button class="elab-v67-close" id="elab-v67-explain">Explain this circuit</button></div><div id="elab-v67-ai-result" class="elab-v67-note">Uses the current Builder snapshot and the existing Assistant when available.</div></div><div class="elab-v67-note">The analyzer uses the existing Builder state. Advanced component models are explicit APIs; unsupported circuit topologies are not silently guessed. Admin privileges remain server-authoritative.</div></div></div>`;
  document.body.appendChild(root);
  id('elab-v67-launch').onclick=()=>{id('elab-v67-panel').classList.add('open');id('elab-v67-panel').setAttribute('aria-hidden','false');refresh();openScope()};
  id('elab-v67-close').onclick=()=>{closeScope();id('elab-v67-panel').classList.remove('open');id('elab-v67-panel').setAttribute('aria-hidden','true')};
@@ -23409,8 +23361,18 @@ window.ElectroLabZeroCostV970={
 <script id="elab-v971-v980-searxng">
 (function(){
 "use strict";
+// This bridge only works when a local SearXNG instance is running on the
+// same machine (developer/self-hosted use). On a real deployment
+// (github.io, pages.dev, netlify.app, or any non-localhost host) there is
+// no such service to reach, so it's disabled by default in production
+// rather than issuing a network call that can never succeed.
 var SEARXNG_LOCAL={
-  enabled:true,
+  enabled:(function(){
+    try{
+      var h=location.hostname||"";
+      return h==="localhost" || h==="127.0.0.1" || location.protocol==="file:";
+    }catch(_){ return false; }
+  })(),
   endpoint:"http://127.0.0.1:8888/search",
   timeoutMs:8000,
   maxResults:10,
@@ -24577,8 +24539,6 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
   });
 })();
 </script>
-</body>
-</html>
 <!-- ===== ElectroLab v10.22 — Diagram Learn → Build → Simulate Workflow ===== -->
 <style id="elab-v1022-diagram-workflow-style">
 #elab-v1022-diagram-library{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(2,6,23,.94)}
@@ -25441,3 +25401,5 @@ new MutationObserver(bind).observe(document.documentElement,{childList:true,subt
 
 })();
 </script>
+</body>
+</html>
